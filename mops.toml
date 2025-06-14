@@ -1,0 +1,7 @@
+[dependencies]
+base = "0.14.9"
+map = "9.0.1"
+
+[dev-dependencies]
+test = "2.1.1"
+matchers = "https://github.com/kritzcreek/motoko-matchers#master@5ba5f52bd9a5649dedf5e2a1ccd55d98ed7ff982"
