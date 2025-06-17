@@ -9,34 +9,69 @@ import Time "mo:base/Time";
 import Map "mo:map/Map";
 import Types "./Types";
 import Storage "./Storage";
+import Authorization "./Authorization";
 
 module {
-  public class GovernanceManager(storage: Storage.Storage) {
+  public class GovernanceManager(storage: Storage.Storage, authManager: Authorization.AuthorizationManager) {
+    
+    // Role-based minimum stake requirements
+    private func getMinimumStakeRequirement(role: Types.UserRole) : Nat {
+      switch (role) {
+        case (#Brand) { 500 };      // Brands need 500 tokens minimum
+        case (#Influencer) { 100 }; // Influencers need 100 tokens minimum
+      }
+    };
+
+    // Role-based voting power multipliers
+    private func getVotingPowerMultiplier(role: Types.UserRole) : Float {
+      switch (role) {
+        case (#Brand) { 1.5 };      // Brands get 1.5x voting power
+        case (#Influencer) { 1.2 }; // Influencers get 1.2x voting power
+      }
+    };
     
     // Stake tokens to gain voting power
     public func stake(caller: Principal, amount: Nat) : Types.GovernanceResult<Text> {
-      // Check if user has sufficient balance
-      let userBalance = switch (Map.get(storage.userBalances, Map.phash, caller)) {
-        case null { 0 };
-        case (?balance) { balance };
-      };
-      
-      if (userBalance < amount) {
-        return #err("Insufficient balance to stake");
-      };
-      
-      // Update user balance using Int arithmetic
-      let newBalance = Int.abs(Int.abs(userBalance) - Int.abs(amount));
-      Map.set(storage.userBalances, Map.phash, caller, newBalance);
-      
-      // Update user stake
-      let currentStake = switch (Map.get(storage.userStakes, Map.phash, caller)) {
-        case null { 0 };
-        case (?stake) { stake };
-      };
-      Map.set(storage.userStakes, Map.phash, caller, currentStake + amount);
-      
-      #ok("Successfully staked " # Nat.toText(amount) # " tokens. Total stake: " # Nat.toText(currentStake + amount))
+      // Require user authentication and get role
+      switch (authManager.getUserAccount(caller)) {
+        case (#err(_)) { return #err("User must be registered to stake tokens") };
+        case (#ok(account)) {
+          // Check minimum stake requirement for role
+          let minStake = getMinimumStakeRequirement(account.role);
+          let currentStake = switch (Map.get(storage.userStakes, Map.phash, caller)) {
+            case null { 0 };
+            case (?stake) { stake };
+          };
+          
+          // If first time staking, ensure it meets minimum
+          if (currentStake == 0 and amount < minStake) {
+            let roleText = switch (account.role) {
+              case (#Brand) { "Brand" };
+              case (#Influencer) { "Influencer" };
+            };
+            return #err(roleText # " users must stake at least " # Nat.toText(minStake) # " tokens");
+          };
+
+          // Check if user has sufficient balance
+          let userBalance = switch (Map.get(storage.userBalances, Map.phash, caller)) {
+            case null { 0 };
+            case (?balance) { balance };
+          };
+          
+          if (userBalance < amount) {
+            return #err("Insufficient balance to stake");
+          };
+          
+          // Update user balance using Int arithmetic
+          let newBalance = Int.abs(Int.abs(userBalance) - Int.abs(amount));
+          Map.set(storage.userBalances, Map.phash, caller, newBalance);
+          
+          // Update user stake
+          Map.set(storage.userStakes, Map.phash, caller, currentStake + amount);
+          
+          #ok("Successfully staked " # Nat.toText(amount) # " tokens. Total stake: " # Nat.toText(currentStake + amount))
+        };
+      }
     };
 
     // Create a new proposal
@@ -77,74 +112,89 @@ module {
 
     // Vote on a proposal
     public func vote(caller: Principal, proposalId: Nat, voteBool: Bool) : Types.GovernanceResult<Text> {
-      // Check if proposal exists
-      switch (Map.get(storage.proposals, Map.nhash, proposalId)) {
-        case null { #err("Proposal not found") };
-        case (?proposal) {
-          // Check if proposal is still active
-          if (not proposal.isActive) {
-            return #err("Proposal is not active");
-          };
-          
-          // Check if voting period has ended
-          let currentTime = Time.now();
-          if (currentTime > proposal.votingDeadline) {
-            return #err("Voting period has ended");
-          };
-          
-          // Check if user has already voted
-          let voteKey = Nat.toText(proposalId) # "-" # Principal.toText(caller);
-          switch (Map.get(storage.userVotes, Map.thash, voteKey)) {
-            case (?_) { #err("User has already voted on this proposal") };
-            case null {
-              // Get user's voting power (stake amount)
-              let votingPower = switch (Map.get(storage.userStakes, Map.phash, caller)) {
-                case null { 0 };
-                case (?stake) { stake };
+      // Require user authentication and get role for voting power calculation
+      switch (authManager.getUserAccount(caller)) {
+        case (#err(_)) { return #err("User must be registered to vote") };
+        case (#ok(account)) {
+          // Check if proposal exists
+          switch (Map.get(storage.proposals, Map.nhash, proposalId)) {
+            case null { #err("Proposal not found") };
+            case (?proposal) {
+              // Check if proposal is still active
+              if (not proposal.isActive) {
+                return #err("Proposal is not active");
               };
               
-              if (votingPower == 0) {
-                return #err("Must stake tokens to vote");
+              // Check if voting period has ended
+              let currentTime = Time.now();
+              if (currentTime > proposal.votingDeadline) {
+                return #err("Voting period has ended");
               };
               
-              // Create vote record
-              let voteRecord : Types.Vote = {
-                proposalId = proposalId;
-                voter = caller;
-                choice = if (voteBool) { #For } else { #Against };
-                votingPower = votingPower;
-                timestamp = currentTime;
-              };
-              
-              // Add vote to votes array
-              let currentVotes = switch (Map.get(storage.votes, Map.nhash, proposalId)) {
-                case null { [] };
-                case (?voteArray) { voteArray };
-              };
-              let updatedVotes = Array.append<Types.Vote>(currentVotes, [voteRecord]);
-              Map.set(storage.votes, Map.nhash, proposalId, updatedVotes);
-              
-              // Mark user as voted
-              Map.set(storage.userVotes, Map.thash, voteKey, true);
-              
-              // Update proposal vote counts
-              let updatedProposal : Types.Proposal = {
-                id = proposal.id;
-                title = proposal.title;
-                description = proposal.description;
-                proposer = proposal.proposer;
-                createdAt = proposal.createdAt;
-                votingDeadline = proposal.votingDeadline;
-                votesFor = if (voteBool) { proposal.votesFor + votingPower } else { proposal.votesFor };
-                votesAgainst = if (not voteBool) { proposal.votesAgainst + votingPower } else { proposal.votesAgainst };
-                totalVotingPower = proposal.totalVotingPower + votingPower;
-                isExecuted = proposal.isExecuted;
-                isActive = proposal.isActive;
-              };
-              Map.set(storage.proposals, Map.nhash, proposalId, updatedProposal);
-              
-              let voteType = if (voteBool) { "for" } else { "against" };
-              #ok("Successfully voted " # voteType # " proposal with " # Nat.toText(votingPower) # " voting power")
+              // Check if user has already voted
+              let voteKey = Nat.toText(proposalId) # "-" # Principal.toText(caller);
+              switch (Map.get(storage.userVotes, Map.thash, voteKey)) {
+                case (?_) { #err("User has already voted on this proposal") };
+                case null {
+                  // Get user's base voting power (stake amount)
+                  let baseStake = switch (Map.get(storage.userStakes, Map.phash, caller)) {
+                    case null { 0 };
+                    case (?stake) { stake };
+                  };
+                  
+                  if (baseStake == 0) {
+                    return #err("Must stake tokens to vote");
+                  };
+                  
+                  // Calculate role-based voting power
+                  let multiplier = getVotingPowerMultiplier(account.role);
+                  let effectiveVotingPower = Float.toInt(Float.fromInt(baseStake) * multiplier);
+                  let votingPower = Int.abs(effectiveVotingPower);
+                  
+                  // Create vote record
+                  let voteRecord : Types.Vote = {
+                    proposalId = proposalId;
+                    voter = caller;
+                    choice = if (voteBool) { #For } else { #Against };
+                    votingPower = votingPower;
+                    timestamp = currentTime;
+                  };
+                  
+                  // Add vote to votes array
+                  let currentVotes = switch (Map.get(storage.votes, Map.nhash, proposalId)) {
+                    case null { [] };
+                    case (?voteArray) { voteArray };
+                  };
+                  let updatedVotes = Array.append<Types.Vote>(currentVotes, [voteRecord]);
+                  Map.set(storage.votes, Map.nhash, proposalId, updatedVotes);
+                  
+                  // Mark user as voted
+                  Map.set(storage.userVotes, Map.thash, voteKey, true);
+                  
+                  // Update proposal vote counts
+                  let updatedProposal : Types.Proposal = {
+                    id = proposal.id;
+                    title = proposal.title;
+                    description = proposal.description;
+                    proposer = proposal.proposer;
+                    createdAt = proposal.createdAt;
+                    votingDeadline = proposal.votingDeadline;
+                    votesFor = if (voteBool) { proposal.votesFor + votingPower } else { proposal.votesFor };
+                    votesAgainst = if (not voteBool) { proposal.votesAgainst + votingPower } else { proposal.votesAgainst };
+                    totalVotingPower = proposal.totalVotingPower + votingPower;
+                    isExecuted = proposal.isExecuted;
+                    isActive = proposal.isActive;
+                  };
+                  Map.set(storage.proposals, Map.nhash, proposalId, updatedProposal);
+                  
+                  let voteType = if (voteBool) { "for" } else { "against" };
+                  let roleText = switch (account.role) {
+                    case (#Brand) { "Brand" };
+                    case (#Influencer) { "Influencer" };
+                  };
+                  #ok("Successfully voted " # voteType # " proposal with " # Nat.toText(votingPower) # " voting power (" # roleText # " multiplier applied)")
+                };
+              }
             };
           }
         };

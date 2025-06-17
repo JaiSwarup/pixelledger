@@ -3,6 +3,43 @@ import Result "mo:base/Result";
 import Text "mo:base/Text";
 
 module {
+  // === USER ROLE TYPES ===
+  
+  public type UserRole = {
+    #Brand;
+    #Influencer;
+  };
+
+  public type UserAccount = {
+    principal: Principal;
+    role: UserRole;
+    brandInfo: ?BrandInfo;
+    influencerInfo: ?InfluencerInfo;
+    profile: ?Profile;
+    isActive: Bool;
+    createdAt: Int;
+  };
+
+  public type RoleRegistration = {
+    role: UserRole;
+    brandInfo: ?BrandInfo;
+    influencerInfo: ?InfluencerInfo;
+    profile: ?Profile;
+  };
+
+  // === AUTHORIZATION TYPES ===
+  
+  public type AuthError = {
+    #Unauthorized: Text;
+    #InsufficientPermissions: Text;
+    #RoleRequired: UserRole;
+    #AccountNotFound;
+    #AccountInactive;
+    #InsufficientStake;
+  };
+
+  public type AuthResult<T> = Result.Result<T, AuthError>;
+
   // === CAMPAIGN TYPES ===
   
   public type Campaign = {
@@ -11,7 +48,7 @@ module {
     description: Text;
     payout: Nat;
     owner: Principal; // Who created the campaign
-    applicants: [Text]; // Array of applicant identifiers
+    applicants: [Principal]; // Array of applicant principals
     isCompleted: Bool; // Whether the campaign has been completed
   };
 
@@ -28,12 +65,40 @@ module {
     bio: Text;
     socialLinks: [Text]; // Array of social media links
     completedCampaigns: [Nat]; // Array of completed campaign IDs
+    role: UserRole;
+    // Role-specific fields
+    brandInfo: ?BrandInfo; // Only for Brand users
+    influencerInfo: ?InfluencerInfo; // Only for Influencer users
+  };
+
+  public type BrandInfo = {
+    companyName: Text;
+    industry: Text;
+    website: Text;
+    verificationStatus: VerificationStatus;
+  };
+
+  public type InfluencerInfo = {
+    followerCount: Nat;
+    engagementRate: Float;
+    contentCategories: [Text];
+    portfolioLinks: [Text];
+    verificationStatus: VerificationStatus;
+  };
+
+  public type VerificationStatus = {
+    #Pending;
+    #Verified;
+    #Rejected;
   };
 
   public type ProfileInput = {
     username: Text;
     bio: Text;
     socialLinks: [Text];
+    // Role-specific inputs
+    brandInfo: ?BrandInfo;
+    influencerInfo: ?InfluencerInfo;
   };
 
   // === DAO TYPES ===

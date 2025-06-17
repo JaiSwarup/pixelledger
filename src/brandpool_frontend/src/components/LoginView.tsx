@@ -1,7 +1,33 @@
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useRoleAuth } from '../hooks/useRoleAuth';
+import { RoleRegistration } from './RoleRegistration';
 
 export function LoginView() {
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, isAuthenticated } = useAuth();
+  const { isRegistered, loading: roleLoading } = useRoleAuth();
+  const [showRegistration, setShowRegistration] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated && !roleLoading) {
+      setShowRegistration(!isRegistered);
+    }
+  }, [isAuthenticated, isRegistered, roleLoading]);
+
+  const handleRegistrationComplete = () => {
+    setShowRegistration(false);
+    // Trigger a refresh or redirect to dashboard
+    window.location.reload();
+  };
+
+  if (isAuthenticated && showRegistration) {
+    return <RoleRegistration onRegistrationComplete={handleRegistrationComplete} />;
+  }
+
+  if (isAuthenticated && isRegistered) {
+    // User is authenticated and registered, this component shouldn't be shown
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">

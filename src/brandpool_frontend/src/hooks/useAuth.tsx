@@ -33,13 +33,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setAuthClient(client);
 
         const isAuthenticated = await client.isAuthenticated();
+        console.log('Auth initialization - isAuthenticated:', isAuthenticated);
+        
         if (isAuthenticated) {
           const identity = client.getIdentity();
           const principal = identity.getPrincipal();
           
+          console.log('=== EXISTING AUTH FOUND ===');
+          console.log('Principal:', principal.toString());
+          console.log('========================');
+          
           setIsAuthenticated(true);
           setIdentity(identity);
           setPrincipal(principal);
+        } else {
+          console.log('No existing authentication found');
         }
       } catch (error) {
         console.error('Error initializing auth client:', error);
@@ -59,13 +67,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await authClient.login({
         // Use the Internet Identity canister for local development
         identityProvider: import.meta.env.DFX_NETWORK === "local" 
-          ? `http://uzt4z-lp777-77774-qaabq-cai.localhost:4943/`
+          ? `http://${import.meta.env.CANISTER_ID_INTERNET_IDENTITY}.localhost:4943/`
           : "https://identity.ic0.app",
         onSuccess: () => {
           const identity = authClient.getIdentity();
           const principal = identity.getPrincipal();
           
-          console.log('Login successful, principal:', principal.toString());
+          console.log('=== LOGIN SUCCESSFUL ===');
+          console.log('Principal:', principal.toString());
+          console.log('Principal toText():', principal.toText());
+          console.log('Identity type:', typeof identity);
+          console.log('========================');
+          
           setIsAuthenticated(true);
           setIdentity(identity);
           setPrincipal(principal);
@@ -91,6 +104,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setIsAuthenticated(false);
       setIdentity(null);
       setPrincipal(null);
+      
+      // Force a page reload to clear all application state
+      window.location.reload();
     } catch (error) {
       console.error('Logout error:', error);
     } finally {

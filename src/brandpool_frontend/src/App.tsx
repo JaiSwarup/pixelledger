@@ -1,65 +1,56 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { createActor, brandpool_backend } from '../../declarations/brandpool_backend';
 import { Campaign, Profile, Proposal } from '../../declarations/brandpool_backend/brandpool_backend.did';
 import { Principal } from '@dfinity/principal';
 
 // Authentication
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { BackendActorProvider, useBackendActor } from './hooks/useBackendActor';
+import { useRoleAuth } from './hooks/useRoleAuth';
 
-// Components
+// Role-based Components
 import { LoginView } from './components/LoginView';
-import { Navigation } from './components/Navigation';
-import { DashboardView } from './components/DashboardView';
-import { CampaignsView } from './components/CampaignsView';
-import { ProfileView } from './components/ProfileView';
-import { GovernanceView } from './components/GovernanceView';
-import { EscrowView } from './components/EscrowView';
+import { RoleRegistration } from './components/RoleRegistration';
+import { RoleNavigation } from './components/RoleNavigation';
+import { RoleDashboard } from './components/RoleDashboard';
+import { RoleCampaignsView } from './components/RoleCampaignsView';
+import { RoleProfileView } from './components/RoleProfileView';
+import { RoleGovernanceView } from './components/RoleGovernanceView';
+import { RoleEscrowView } from './components/RoleEscrowView';
 
 // Main authenticated app component
 function AuthenticatedApp() {
   const { identity, principal, isAuthenticated } = useAuth();
+  const { backendActor } = useBackendActor();
+  
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [userBalance, setUserBalance] = useState<bigint>(BigInt(0));
   const [isLoading, setIsLoading] = useState(true);
-  const [backendActor, setBackendActor] = useState(brandpool_backend);
+  
+  const { isRegistered, loading: roleLoading, userAccount } = useRoleAuth();
 
-  // Create authenticated backend actor
+  // Clear state when principal changes (user switches accounts)
   useEffect(() => {
-    if (identity && isAuthenticated) {
-      // Get canister ID from environment variables
-      const canisterId = import.meta.env.CANISTER_ID_BRANDPOOL_BACKEND || 
-                        'uxrrr-q7777-77774-qaaaq-cai'; // Hardcoded fallback for local development
-      
-      console.log('Creating actor with canister ID:', canisterId);
-      console.log('Available env vars:', {
-        CANISTER_ID_BRANDPOOL_BACKEND: import.meta.env.CANISTER_ID_BRANDPOOL_BACKEND,
-        DFX_NETWORK: import.meta.env.DFX_NETWORK,
-        all: import.meta.env
-      });
+    console.log('App: Principal changed to:', principal?.toString() || 'null');
+    // Reset all app state when principal changes
+    setCampaigns([]);
+    setProposals([]);
+    setUserProfile(null);
+    setUserBalance(BigInt(0));
+    setIsLoading(true);
+  }, [principal]);
 
-      try {
-        const actor = createActor(canisterId, {
-          agentOptions: {
-            identity,
-            host: import.meta.env.DFX_NETWORK === "local" ? "http://localhost:4943" : "https://icp-api.io",
-          },
-        });
-        setBackendActor(actor);
-        console.log('Successfully created authenticated actor');
-      } catch (error) {
-        console.error('Error creating authenticated actor:', error);
-        // Fallback to default actor
-        setBackendActor(brandpool_backend);
-      }
-    }
-  }, [identity, isAuthenticated]);
+  // Handle registration completion
+  const handleRegistrationComplete = () => {
+    // Trigger a refresh by reloading the page
+    window.location.reload();
+  };
 
-  // Load user data when we have an authenticated backend actor
+  // Load user data when we have a registered user
   useEffect(() => {
-    if (backendActor && principal) {
+    if (principal && isRegistered) {
       const initializeApp = async () => {
         setIsLoading(true);
         try {
@@ -76,12 +67,13 @@ function AuthenticatedApp() {
 
       initializeApp();
     }
-  }, [backendActor, principal]);
+  }, [principal, isRegistered]);
 
   const loadUserData = async (userPrincipal: Principal) => {
     if (!backendActor) return;
     
     try {
+      // Use role-based profile loading
       const [profileResult, balance] = await Promise.all([
         backendActor.getProfile(userPrincipal),
         backendActor.getUserBalance(userPrincipal)
@@ -103,11 +95,12 @@ function AuthenticatedApp() {
     if (!backendActor) return;
     
     try {
-      const [campaignsData, proposalsData] = await Promise.all([
+      const [campaignsResult, proposalsData] = await Promise.all([
         backendActor.getCampaigns(),
         backendActor.getAllProposals()
       ]);
-      setCampaigns(campaignsData);
+      
+      setCampaigns(campaignsResult); // campaignsResult is now directly an array
       setProposals(proposalsData);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -124,15 +117,31 @@ function AuthenticatedApp() {
     loadDashboardData();
   };
 
+  // All conditional returns AFTER all hooks
   if (!isAuthenticated) {
     return <LoginView />;
+  }
+
+  if (isAuthenticated && !roleLoading && !isRegistered) {
+    return <RoleRegistration onRegistrationComplete={() => window.location.reload()} />;
+  }
+
+  if (roleLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking user registration...</p>
+        </div>
+      </div>
+    );
   }
 
   if (isLoading || !backendActor) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading BrandPool...</p>
         </div>
       </div>
@@ -141,35 +150,24 @@ function AuthenticatedApp() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation userProfile={userProfile} userBalance={userBalance} />
+      <RoleNavigation userProfile={userProfile} userBalance={userBalance} />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Routes>
-          <Route 
-            path="/" 
-            element={
-              <DashboardView 
-                campaigns={campaigns} 
-                proposals={proposals} 
-                userProfile={userProfile}
-              />
-            } 
-          />
+          <Route path="/" element={<RoleDashboard />} />
           <Route 
             path="/campaigns" 
             element={
-              <CampaignsView 
+              <RoleCampaignsView 
                 campaigns={campaigns} 
-                userPrincipal={principal}
-                onCampaignsUpdate={handleDashboardDataUpdate}
-                backendActor={backendActor}
+                onDataUpdate={handleDashboardDataUpdate}
               />
             } 
           />
           <Route 
             path="/profile" 
             element={
-              <ProfileView 
+              <RoleProfileView 
                 userProfile={userProfile} 
                 userPrincipal={principal}
                 onProfileUpdate={handleUserDataUpdate}
@@ -180,7 +178,7 @@ function AuthenticatedApp() {
           <Route 
             path="/governance" 
             element={
-              <GovernanceView 
+              <RoleGovernanceView 
                 proposals={proposals} 
                 userPrincipal={principal}
                 userBalance={userBalance}
@@ -192,7 +190,7 @@ function AuthenticatedApp() {
           <Route 
             path="/escrow" 
             element={
-              <EscrowView 
+              <RoleEscrowView 
                 campaigns={campaigns} 
                 userPrincipal={principal}
                 userBalance={userBalance}
@@ -211,9 +209,11 @@ function AuthenticatedApp() {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <AuthenticatedApp />
-      </Router>
+      <BackendActorProvider>
+        <Router>
+          <AuthenticatedApp />
+        </Router>
+      </BackendActorProvider>
     </AuthProvider>
   );
 }

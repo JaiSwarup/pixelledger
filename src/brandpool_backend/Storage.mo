@@ -23,6 +23,9 @@ module {
     // Profile storage
     var profiles: Map.Map<Principal, Types.Profile>;
     
+    // Authorization storage
+    var userAccounts: Map.Map<Principal, Types.UserAccount>;
+    
     // DAO storage
     var userStakes: Map.Map<Principal, Nat>;
     var proposals: Map.Map<Nat, Types.Proposal>;
@@ -44,6 +47,8 @@ module {
       
       var profiles = Map.new<Principal, Types.Profile>();
       
+      var userAccounts = Map.new<Principal, Types.UserAccount>();
+      
       var userStakes = Map.new<Principal, Nat>();
       var proposals = Map.new<Nat, Types.Proposal>();
       var nextProposalId = 1;
@@ -60,6 +65,7 @@ module {
     escrowBalanceEntries: [(Nat, Nat)];
     userBalanceEntries: [(Principal, Nat)];
     profileEntries: [(Principal, Types.Profile)];
+    userAccountEntries: [(Principal, Types.UserAccount)];
     userStakeEntries: [(Principal, Nat)];
     proposalEntries: [(Nat, Types.Proposal)];
     voteEntries: [(Nat, [Types.Vote])];
@@ -76,6 +82,7 @@ module {
       escrowBalanceEntries = Iter.toArray(Map.entries(storage.escrowBalances));
       userBalanceEntries = Iter.toArray(Map.entries(storage.userBalances));
       profileEntries = Iter.toArray(Map.entries(storage.profiles));
+      userAccountEntries = Iter.toArray(Map.entries(storage.userAccounts));
       userStakeEntries = Iter.toArray(Map.entries(storage.userStakes));
       proposalEntries = Iter.toArray(Map.entries(storage.proposals));
       voteEntries = Iter.toArray(Map.entries(storage.votes));
@@ -97,6 +104,8 @@ module {
     storage.userBalances := Map.fromIter<Principal, Nat>(stableStorage.userBalanceEntries.vals(), phash);
     
     storage.profiles := Map.fromIter<Principal, Types.Profile>(stableStorage.profileEntries.vals(), phash);
+    
+    storage.userAccounts := Map.fromIter<Principal, Types.UserAccount>(stableStorage.userAccountEntries.vals(), phash);
     
     storage.userStakes := Map.fromIter<Principal, Nat>(stableStorage.userStakeEntries.vals(), phash);
     storage.proposals := Map.fromIter<Nat, Types.Proposal>(stableStorage.proposalEntries.vals(), nhash);

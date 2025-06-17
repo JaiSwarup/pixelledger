@@ -1,19 +1,33 @@
 import { NavLink } from 'react-router-dom';
 import { Profile } from '../../../declarations/brandpool_backend/brandpool_backend.did';
 import { useAuth } from '../hooks/useAuth';
+import { useRoleAuth } from '../hooks/useRoleAuth';
 
-interface NavigationProps {
+interface RoleNavigationProps {
   userProfile: Profile | null;
   userBalance: bigint;
 }
 
-export function Navigation({ userProfile, userBalance }: NavigationProps) {
+export function RoleNavigation({ userProfile, userBalance }: RoleNavigationProps) {
   const { logout, principal } = useAuth();
+  const { userAccount, isBrand, isInfluencer } = useRoleAuth();
 
   const handleLogout = async () => {
     if (confirm('Are you sure you want to log out?')) {
       await logout();
     }
+  };
+
+  const getRoleDisplayName = () => {
+    if (isBrand()) return 'Brand';
+    if (isInfluencer()) return 'Influencer';
+    return 'User';
+  };
+
+  const getRoleColor = () => {
+    if (isBrand()) return 'bg-blue-500';
+    if (isInfluencer()) return 'bg-purple-500';
+    return 'bg-gray-500';
   };
 
   return (
@@ -39,6 +53,7 @@ export function Navigation({ userProfile, userBalance }: NavigationProps) {
               >
                 Dashboard
               </NavLink>
+              
               <NavLink
                 to="/campaigns"
                 className={({ isActive }) =>
@@ -49,8 +64,9 @@ export function Navigation({ userProfile, userBalance }: NavigationProps) {
                   }`
                 }
               >
-                Campaigns
+                {isBrand() ? 'My Campaigns' : 'Browse Campaigns'}
               </NavLink>
+              
               <NavLink
                 to="/profile"
                 className={({ isActive }) =>
@@ -63,6 +79,8 @@ export function Navigation({ userProfile, userBalance }: NavigationProps) {
               >
                 Profile
               </NavLink>
+              
+              {/* Governance is available to all users */}
               <NavLink
                 to="/governance"
                 className={({ isActive }) =>
@@ -75,6 +93,8 @@ export function Navigation({ userProfile, userBalance }: NavigationProps) {
               >
                 DAO Governance
               </NavLink>
+              
+              {/* Escrow is mainly for brands but influencers can view their earnings */}
               <NavLink
                 to="/escrow"
                 className={({ isActive }) =>
@@ -85,7 +105,7 @@ export function Navigation({ userProfile, userBalance }: NavigationProps) {
                   }`
                 }
               >
-                Escrow
+                {isBrand() ? 'Campaign Escrow' : 'Earnings'}
               </NavLink>
             </div>
           </div>
@@ -94,7 +114,32 @@ export function Navigation({ userProfile, userBalance }: NavigationProps) {
             <div className="text-sm text-gray-600">
               Balance: <span className="font-medium">{userBalance.toString()} tokens</span>
             </div>
-            {userProfile ? (
+            
+            {userAccount && (
+              <div className="flex items-center space-x-2">
+                <div className={`w-8 h-8 ${getRoleColor()} rounded-full flex items-center justify-center`}>
+                  <span className="text-white text-sm font-medium">
+                    {getRoleDisplayName().charAt(0)}
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-gray-700">
+                    {userAccount.profile?.[0]?.username || 'User'}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {getRoleDisplayName()}
+                  </span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="ml-2 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded border border-gray-300 hover:border-gray-400 transition-colors"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
+            
+            {!userAccount && userProfile && (
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-sm font-medium">
@@ -109,7 +154,9 @@ export function Navigation({ userProfile, userBalance }: NavigationProps) {
                   Logout
                 </button>
               </div>
-            ) : (
+            )}
+            
+            {!userAccount && !userProfile && (
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center">
                   <span className="text-white text-sm font-medium">?</span>
