@@ -1,5 +1,14 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ],
+      "declarations/*": [
+        "../declarations/*"
+      ]
+    },
     "allowJs": false,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": false,

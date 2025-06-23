@@ -37,9 +37,9 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
-    headers: {
-      'Content-Security-Policy': "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: ws: wss: http: https:; connect-src 'self' http://localhost:* http://127.0.0.1:* https://*.ic0.app https://*.internetcomputer.org https://icp-api.io ws://localhost:* wss://localhost:*;",
-    },
+    // headers: {
+    //   'Content-Security-Policy': "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: ws: wss: http: https:; connect-src 'self' http://localhost:* http://127.0.0.1:* https://*.ic0.app https://*.internetcomputer.org https://icp-api.io ws://localhost:* wss://localhost:*;",
+    // },
   },
   plugins: [
     react(),
@@ -67,6 +67,10 @@ export default defineConfig({
           new URL("../declarations", import.meta.url)
         ),
       },
+      {
+        find: "@",
+        replacement: fileURLToPath(new URL("./src", import.meta.url)),
+      }
     ],
     dedupe: ['@dfinity/agent'],
   },

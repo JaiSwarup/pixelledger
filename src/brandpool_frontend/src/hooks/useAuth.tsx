@@ -10,6 +10,8 @@ interface AuthContextType {
   login: () => Promise<void>;
   logout: () => Promise<void>;
   isLoading: boolean;
+  isInitialized: boolean;
+  loginError: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -23,7 +25,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [principal, setPrincipal] = useState<Principal | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   // Initialize auth client on component mount
   useEffect(() => {
@@ -51,8 +55,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       } catch (error) {
         console.error('Error initializing auth client:', error);
+        setLoginError('Failed to initialize authentication');
       } finally {
-        setIsLoading(false);
+        setIsInitialized(true);
       }
     };
 
@@ -63,6 +68,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!authClient) return;
 
     setIsLoading(true);
+    setLoginError(null);
     try {
       await authClient.login({
         // Use the Internet Identity canister for local development
@@ -83,14 +89,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setIdentity(identity);
           setPrincipal(principal);
           setIsLoading(false);
+          setLoginError(null);
         },
         onError: (error) => {
           console.error('Login error:', error);
+          setLoginError('Failed to authenticate with Internet Identity');
           setIsLoading(false);
         }
       });
     } catch (error) {
       console.error('Login error:', error);
+      setLoginError('Authentication failed. Please try again.');
       setIsLoading(false);
     }
   };
@@ -120,7 +129,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     principal,
     login,
     logout,
-    isLoading
+    isLoading,
+    isInitialized,
+    loginError
   };
 
   return (

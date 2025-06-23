@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router } from 'react-router-dom';
 import { Campaign, Profile, Proposal } from '../../declarations/brandpool_backend/brandpool_backend.did';
 import { Principal } from '@dfinity/principal';
 
@@ -8,19 +8,13 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import { BackendActorProvider, useBackendActor } from './hooks/useBackendActor';
 import { useRoleAuth } from './hooks/useRoleAuth';
 
-// Role-based Components
-import { LoginView } from './components/LoginView';
-import { RoleRegistration } from './components/RoleRegistration';
-import { RoleNavigation } from './components/RoleNavigation';
-import { RoleDashboard } from './components/RoleDashboard';
-import { RoleCampaignsView } from './components/RoleCampaignsView';
-import { RoleProfileView } from './components/RoleProfileView';
-import { RoleGovernanceView } from './components/RoleGovernanceView';
-import { RoleEscrowView } from './components/RoleEscrowView';
+// Components
+import { AuthRouter } from './components/AuthRouter';
+import { LoadingScreen } from './components/LoadingScreen';
 
 // Main authenticated app component
 function AuthenticatedApp() {
-  const { identity, principal, isAuthenticated } = useAuth();
+  const { identity, principal, isAuthenticated, isInitialized } = useAuth();
   const { backendActor } = useBackendActor();
   
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -42,15 +36,9 @@ function AuthenticatedApp() {
     setIsLoading(true);
   }, [principal]);
 
-  // Handle registration completion
-  const handleRegistrationComplete = () => {
-    // Trigger a refresh by reloading the page
-    window.location.reload();
-  };
-
   // Load user data when we have a registered user
   useEffect(() => {
-    if (principal && isRegistered) {
+    if (principal && isAuthenticated && isRegistered && backendActor) {
       const initializeApp = async () => {
         setIsLoading(true);
         try {
@@ -66,8 +54,11 @@ function AuthenticatedApp() {
       };
 
       initializeApp();
+    } else if (isAuthenticated && !roleLoading && !isRegistered) {
+      // User is authenticated but not registered
+      setIsLoading(false);
     }
-  }, [principal, isRegistered]);
+  }, [principal, isAuthenticated, isRegistered, backendActor, roleLoading]);
 
   const loadUserData = async (userPrincipal: Principal) => {
     if (!backendActor) return;
@@ -117,91 +108,27 @@ function AuthenticatedApp() {
     loadDashboardData();
   };
 
-  // All conditional returns AFTER all hooks
-  if (!isAuthenticated) {
-    return <LoginView />;
-  }
-
-  if (isAuthenticated && !roleLoading && !isRegistered) {
-    return <RoleRegistration onRegistrationComplete={() => window.location.reload()} />;
-  }
-
-  if (roleLoading) {
+  // Show loading screen while initializing
+  if (isLoading && isAuthenticated && isRegistered) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Checking user registration...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading || !backendActor) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading BrandPool...</p>
-        </div>
-      </div>
+      <LoadingScreen 
+        message="Loading BrandPool..."
+        submessage="Fetching your data and campaigns"
+      />
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <RoleNavigation userProfile={userProfile} userBalance={userBalance} />
-      
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Routes>
-          <Route path="/" element={<RoleDashboard />} />
-          <Route 
-            path="/campaigns" 
-            element={
-              <RoleCampaignsView 
-                campaigns={campaigns} 
-                onDataUpdate={handleDashboardDataUpdate}
-              />
-            } 
-          />
-          <Route 
-            path="/profile" 
-            element={
-              <RoleProfileView 
-                userProfile={userProfile} 
-                userPrincipal={principal}
-                onProfileUpdate={handleUserDataUpdate}
-                backendActor={backendActor}
-              />
-            } 
-          />
-          <Route 
-            path="/governance" 
-            element={
-              <RoleGovernanceView 
-                proposals={proposals} 
-                userPrincipal={principal}
-                userBalance={userBalance}
-                onProposalsUpdate={handleDashboardDataUpdate}
-                backendActor={backendActor}
-              />
-            } 
-          />
-          <Route 
-            path="/escrow" 
-            element={
-              <RoleEscrowView 
-                campaigns={campaigns} 
-                userPrincipal={principal}
-                userBalance={userBalance}
-                onBalanceUpdate={handleUserDataUpdate}
-                backendActor={backendActor}
-              />
-            } 
-          />
-        </Routes>
-      </main>
-    </div>
+    <AuthRouter
+      campaigns={campaigns}
+      proposals={proposals}
+      userProfile={userProfile}
+      userBalance={userBalance}
+      principal={principal}
+      backendActor={backendActor}
+      onDataUpdate={handleDashboardDataUpdate}
+      onUserDataUpdate={handleUserDataUpdate}
+    />
   );
 }
 

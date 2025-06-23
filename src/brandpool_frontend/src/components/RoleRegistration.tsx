@@ -1,7 +1,18 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Building2, Globe, Users, Target, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import {UserRole, BrandInfo, InfluencerInfo} from '../../../declarations/brandpool_backend/brandpool_backend.did';
 import { useRoleAuth, useRoleValidation, ErrorDisplay } from '../hooks/useRoleAuth';
+import { Button } from './ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Checkbox } from './ui/checkbox';
+import ThreeBackground from './ThreeBackground';
+import { useToast } from '../hooks/use-toast';
 
 interface RegistrationProps {
   onRegistrationComplete: () => void;

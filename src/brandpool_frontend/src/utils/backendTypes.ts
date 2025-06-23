@@ -8,7 +8,7 @@ import type {
   Campaign as BackendCampaign,
   Proposal as BackendProposal,
   VerificationStatus 
-} from '../../../declarations/brandpool_backend/brandpool_backend.did';
+} from 'declarations/brandpool_backend/brandpool_backend.did';
 import { Principal } from '@dfinity/principal';
 
 // Generic utility function to handle optional field patterns from backend
