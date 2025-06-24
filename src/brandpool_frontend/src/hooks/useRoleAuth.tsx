@@ -317,7 +317,7 @@ export const RoleBasedComponent = ({
   const hasPermission = allowedRoles.some(role => role in userRole);
 
   if (!hasPermission) {
-    return fallback || <div>You don't have permission to access this feature.</div>;
+    return fallback || <div></div>;
   }
 
   return <>{children}</>;

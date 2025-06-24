@@ -1,7 +1,17 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { LogOut, User, Wallet, ChevronDown } from 'lucide-react';
 import { Profile } from '../../../declarations/brandpool_backend/brandpool_backend.did';
 import { useAuth } from '../hooks/useAuth';
 import { useRoleAuth } from '../hooks/useRoleAuth';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface RoleNavigationProps {
   userProfile: Profile | null;
@@ -25,29 +35,49 @@ export function RoleNavigation({ userProfile, userBalance }: RoleNavigationProps
   };
 
   const getRoleColor = () => {
-    if (isBrand()) return 'bg-blue-500';
-    if (isInfluencer()) return 'bg-purple-500';
-    return 'bg-gray-500';
+    if (isBrand()) return 'from-blue-500 to-cyan-500';
+    if (isInfluencer()) return 'from-purple-500 to-pink-500';
+    return 'from-gray-500 to-gray-600';
+  };
+
+  const getRoleIcon = () => {
+    if (isBrand()) return '🏢';
+    if (isInfluencer()) return '⭐';
+    return '👤';
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
+    <motion.nav 
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      className="bg-cyber-black border-b border-gray-800/50 backdrop-blur-sm sticky top-0 z-50"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center space-x-8">
-            <div className="flex items-center space-x-2">
-              <img src="/logo2.svg" alt="BrandPool" className="h-8 w-8" />
-              <h1 className="text-xl font-bold text-gray-900">BrandPool</h1>
-            </div>
+            {/* Logo */}
+            <motion.div 
+              className="flex items-center space-x-3"
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="relative">
+                <img src="/logo2.svg" alt="BrandPool" className="h-10 w-10 filter brightness-0 invert" />
+                <div className="absolute inset-0 bg-gradient-to-r from-cyber-teal to-cyber-pink opacity-20 rounded-full blur-sm"></div>
+              </div>
+              <h1 className="text-2xl font-orbitron font-bold cyber-text-gradient">
+                BrandPool
+              </h1>
+            </motion.div>
             
-            <div className="hidden md:flex space-x-6">
+            <div className="hidden md:flex space-x-2">
               <NavLink
                 to="/dashboard"
                 className={({ isActive }) =>
-                  `px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  `px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 font-orbitron ${
                     isActive 
-                      ? 'bg-primary-100 text-primary-700' 
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-cyber-teal text-cyber-black shadow-lg' 
+                      : 'text-gray-300 hover:text-cyber-teal hover:bg-gray-800/50'
                   }`
                 }
               >
@@ -57,124 +87,179 @@ export function RoleNavigation({ userProfile, userBalance }: RoleNavigationProps
               <NavLink
                 to="/campaigns"
                 className={({ isActive }) =>
-                  `px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  `px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 font-orbitron ${
                     isActive 
-                      ? 'bg-primary-100 text-primary-700' 
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-cyber-teal text-cyber-black shadow-lg' 
+                      : 'text-gray-300 hover:text-cyber-teal hover:bg-gray-800/50'
                   }`
                 }
               >
-                {isBrand() ? 'My Campaigns' : 'Browse Campaigns'}
+                {isBrand() ? 'My Campaigns' : 'My Applications'}
               </NavLink>
               
               <NavLink
-                to="/profile"
+                to="/explore-campaigns"
                 className={({ isActive }) =>
-                  `px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  `px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 font-orbitron ${
                     isActive 
-                      ? 'bg-primary-100 text-primary-700' 
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-cyber-teal text-cyber-black shadow-lg' 
+                      : 'text-gray-300 hover:text-cyber-teal hover:bg-gray-800/50'
                   }`
                 }
               >
-                Profile
+                Explore Campaigns
               </NavLink>
               
               {/* Governance is available to all users */}
               <NavLink
                 to="/governance"
                 className={({ isActive }) =>
-                  `px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  `px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 font-orbitron ${
                     isActive 
-                      ? 'bg-primary-100 text-primary-700' 
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-cyber-pink text-white shadow-lg' 
+                      : 'text-gray-300 hover:text-cyber-pink hover:bg-gray-800/50'
                   }`
                 }
               >
-                DAO Governance
+                Governance
               </NavLink>
               
               {/* Escrow is mainly for brands but influencers can view their earnings */}
               <NavLink
                 to="/escrow"
                 className={({ isActive }) =>
-                  `px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  `px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 font-orbitron ${
                     isActive 
-                      ? 'bg-primary-100 text-primary-700' 
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-purple-500 text-white shadow-lg' 
+                      : 'text-gray-300 hover:text-purple-400 hover:bg-gray-800/50'
                   }`
                 }
               >
-                {isBrand() ? 'Campaign Escrow' : 'Earnings'}
+                {isBrand() ? 'Escrow' : 'Earnings'}
               </NavLink>
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-600">
-              Balance: <span className="font-medium">{userBalance.toString()} tokens</span>
+          <div className="flex items-center space-x-6">
+            {/* Balance Display */}
+            <div className="hidden sm:block px-4 py-2 neuro-card-mini bg-cyber-gray/30 border border-gray-700/50">
+              <div className="text-xs text-gray-400 mb-1">Balance</div>
+              <div className="text-sm font-bold cyber-text-gradient">
+                {userBalance.toString()} <span className="text-gray-400">tokens</span>
+              </div>
             </div>
             
             {userAccount && (
-              <div className="flex items-center space-x-2">
-                <div className={`w-8 h-8 ${getRoleColor()} rounded-full flex items-center justify-center`}>
-                  <span className="text-white text-sm font-medium">
-                    {getRoleDisplayName().charAt(0)}
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium text-gray-700">
-                    {userAccount.profile?.[0]?.username || 'User'}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {getRoleDisplayName()}
-                  </span>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="ml-2 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded border border-gray-300 hover:border-gray-400 transition-colors"
-                >
-                  Logout
-                </button>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center space-x-3 hover:bg-gray-800/50 rounded-lg p-2 transition-colors">
+                  <div className="hidden lg:flex flex-col text-left">
+                    <span className="text-sm font-medium text-white font-orbitron">
+                      {userAccount.profile?.[0]?.username || 'User'}
+                    </span>
+                    <span className="text-xs cyber-text-gradient">
+                      {getRoleDisplayName()}
+                    </span>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-cyber-gray border border-gray-700 shadow-lg">
+                  <DropdownMenuLabel className="text-white font-orbitron">
+                    My Account
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-gray-700" />
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="flex items-center text-gray-300 hover:text-white hover:bg-gray-800 rounded transition-colors">
+                      <User className="w-4 h-4 mr-2" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-gray-700" />
+                  <DropdownMenuItem 
+                    onClick={handleLogout}
+                    className="flex items-center text-gray-300 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             
             {!userAccount && userProfile && (
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">
-                    {userProfile.username.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <span className="text-sm font-medium text-gray-700">{userProfile.username}</span>
-                <button
-                  onClick={handleLogout}
-                  className="ml-2 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded border border-gray-300 hover:border-gray-400 transition-colors"
-                >
-                  Logout
-                </button>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center space-x-3 hover:bg-gray-800/50 rounded-lg p-2 transition-colors">
+                  <div className="w-10 h-10 bg-gradient-to-r from-cyber-teal to-cyber-pink rounded-lg flex items-center justify-center shadow-lg">
+                    <span className="text-white text-sm font-bold font-orbitron">
+                      {userProfile.username.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="hidden lg:flex flex-col text-left">
+                    <span className="text-sm font-medium text-white font-orbitron">
+                      {userProfile.username}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      User
+                    </span>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-cyber-gray border border-gray-700 shadow-lg">
+                  <DropdownMenuLabel className="text-white font-orbitron">
+                    My Account
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-gray-700" />
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="flex items-center text-gray-300 hover:text-white hover:bg-gray-800 rounded transition-colors">
+                      <User className="w-4 h-4 mr-2" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-gray-700" />
+                  <DropdownMenuItem 
+                    onClick={handleLogout}
+                    className="flex items-center text-gray-300 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             
             {!userAccount && !userProfile && (
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">?</span>
-                </div>
-                <span className="text-sm text-gray-600">
-                  {principal?.toString().slice(0, 8)}...
-                </span>
-                <button
-                  onClick={handleLogout}
-                  className="ml-2 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded border border-gray-300 hover:border-gray-400 transition-colors"
-                >
-                  Logout
-                </button>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center space-x-3 hover:bg-gray-800/50 rounded-lg p-2 transition-colors">
+                  <div className="w-10 h-10 bg-gray-600 rounded-lg flex items-center justify-center shadow-lg">
+                    <span className="text-white text-sm font-bold font-orbitron">?</span>
+                  </div>
+                  <div className="hidden lg:flex flex-col text-left">
+                    <span className="text-sm text-gray-300 font-mono">
+                      {principal?.toString().slice(0, 8)}...
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      Guest
+                    </span>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-cyber-gray border border-gray-700 shadow-lg">
+                  <DropdownMenuLabel className="text-white font-orbitron">
+                    Account
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-gray-700" />
+                  <DropdownMenuItem 
+                    onClick={handleLogout}
+                    className="flex items-center text-gray-300 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         </div>
       </div>
-    </nav>
+    </motion.nav>
   );
 }

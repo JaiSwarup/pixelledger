@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useRoleAuth, ErrorDisplay } from '../hooks/useRoleAuth';
 import { useBackendActor } from '../hooks/useBackendActor';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CheckCircle, Clock, DollarSign, Send, Users, BarChart3, TrendingUp, Star, Search, Trophy } from 'lucide-react';
 import type { Campaign } from '../../../declarations/brandpool_backend/brandpool_backend.did';
+import { Link } from 'react-router-dom';
 
 export const InfluencerDashboard: React.FC = () => {
   const { userAccount } = useRoleAuth();
@@ -90,280 +98,311 @@ export const InfluencerDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-        <span className="ml-2 text-gray-600">Loading campaigns...</span>
+      <div className="min-h-screen bg-cyber-black flex items-center justify-center py-12">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex items-center space-x-3"
+        >
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyber-pink"></div>
+          <span className="text-gray-300 font-orbitron">Loading dashboard...</span>
+        </motion.div>
       </div>
     );
   }
 
   // Filter available campaigns to exclude those already applied to
-  const filteredAvailableCampaigns = availableCampaigns.filter(campaign => 
-    !appliedCampaigns.some(applied => applied.id === campaign.id)
-  );
+  const appliedCampaignIds = new Set(appliedCampaigns.map(c => c.id.toString()));
+  const filteredAvailableCampaigns = availableCampaigns.filter(c => !appliedCampaignIds.has(c.id.toString()));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Error Display */}
-      {error && <ErrorDisplay error={error} />}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="neuro-card p-4 border-l-4 border-red-500 bg-red-900/20"
+        >
+          <p className="text-red-400">{error}</p>
+        </motion.div>
+      )}
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-bold">📝</span>
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Total Applications</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.totalApplications}</p>
-            </div>
-          </div>
-        </div>
+      {/* Welcome Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8"
+      >
+        <h1 className="text-4xl font-orbitron font-bold mb-4">
+          <span className="cyber-text-gradient">Influencer</span> Dashboard
+        </h1>
+        <p className="text-gray-300 text-lg">
+          Discover campaigns and track your applications
+        </p>
+      </motion.div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-bold">⏳</span>
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Active Applications</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.activeApplications}</p>
-            </div>
-          </div>
-        </div>
+      {/* Stats Overview */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="grid grid-cols-1 md:grid-cols-4 gap-6"
+      >
+        <Card className="neuro-card hover:shadow-cyber-glow transition-all duration-300">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-cyber-pink">
+              <Send className="w-5 h-5" />
+              Total Applications
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-cyber-pink">{stats.totalApplications}</div>
+            <p className="text-gray-400 text-sm">All time</p>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-bold">✅</span>
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Completed</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.completedCampaigns}</p>
-            </div>
-          </div>
-        </div>
+        <Card className="neuro-card hover:shadow-cyber-glow transition-all duration-300">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-orange-400">
+              <Clock className="w-5 h-5" />
+              Active Applications
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-orange-400">{stats.activeApplications}</div>
+            <p className="text-gray-400 text-sm">Pending review</p>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-bold">💰</span>
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Total Earnings</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.totalEarnings} ICP</p>
-            </div>
-          </div>
-        </div>
-      </div>
+        <Card className="neuro-card hover:shadow-cyber-glow transition-all duration-300">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-green-400">
+              <Trophy className="w-5 h-5" />
+              Completed
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-400">{stats.completedCampaigns}</div>
+            <p className="text-gray-400 text-sm">Successfully finished</p>
+          </CardContent>
+        </Card>
+
+        <Card className="neuro-card hover:shadow-cyber-glow transition-all duration-300">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-cyber-teal">
+              <DollarSign className="w-5 h-5" />
+              Total Earnings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold cyber-text-gradient">{stats.totalEarnings}</div>
+            <p className="text-gray-400 text-sm">Tokens earned</p>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
-        <div className="flex flex-wrap gap-4">
-          <button
-            onClick={() => setActiveTab('available')}
-            className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 ${
-              activeTab === 'available'
-                ? 'text-white bg-purple-600 hover:bg-purple-700'
-                : 'text-purple-700 bg-purple-100 hover:bg-purple-200'
-            }`}
-          >
-            <span className="mr-2">🔍</span>
-            Browse Campaigns
-          </button>
-          <button
-            onClick={() => setActiveTab('applied')}
-            className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 ${
-              activeTab === 'applied'
-                ? 'text-white bg-purple-600 hover:bg-purple-700'
-                : 'text-purple-700 bg-purple-100 hover:bg-purple-200'
-            }`}
-          >
-            <span className="mr-2">📋</span>
-            My Applications
-          </button>
-          <button
-            onClick={fetchCampaigns}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-          >
-            <span className="mr-2">🔄</span>
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      {/* Campaigns List */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">
-            {activeTab === 'available' ? 'Available Campaigns' : 'My Applications'}
-          </h3>
-        </div>
-
-        {activeTab === 'available' ? (
-          <AvailableCampaignsList 
-            campaigns={filteredAvailableCampaigns}
-            onApply={handleApplyToCampaign}
-          />
-        ) : (
-          <AppliedCampaignsList campaigns={appliedCampaigns} />
-        )}
-      </div>
-    </div>
-  );
-};
-
-interface AvailableCampaignsListProps {
-  campaigns: Campaign[];
-  onApply: (campaignId: bigint) => Promise<void>;
-}
-
-const AvailableCampaignsList: React.FC<AvailableCampaignsListProps> = ({ campaigns, onApply }) => {
-  const [applying, setApplying] = useState<string | null>(null);
-
-  const handleApply = async (campaignId: bigint) => {
-    setApplying(campaignId.toString());
-    try {
-      await onApply(campaignId);
-    } finally {
-      setApplying(null);
-    }
-  };
-
-  if (campaigns.length === 0) {
-    return (
-      <div className="p-6 text-center">
-        <div className="text-gray-400 text-4xl mb-4">🔍</div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No available campaigns</h3>
-        <p className="text-gray-500">Check back later for new opportunities.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="divide-y divide-gray-200">
-      {campaigns.map((campaign) => (
-        <div key={campaign.id.toString()} className="p-6">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center">
-                <h4 className="text-lg font-medium text-gray-900">{campaign.title}</h4>
-                <span className={`ml-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  campaign.isCompleted 
-                    ? 'bg-gray-100 text-gray-800' 
-                    : 'bg-green-100 text-green-800'
-                }`}>
-                  {campaign.isCompleted ? 'Completed' : 'Open'}
-                </span>
-              </div>
-              <p className="text-gray-600 mt-1">{campaign.description}</p>
-              <div className="flex items-center mt-2 text-sm text-gray-500">
-                <span>💰 {campaign.payout.toString()} ICP</span>
-                <span className="mx-2">•</span>
-                <span>👥 {campaign.applicants.length} applicants</span>
-                <span className="mx-2">•</span>
-                <span className="font-mono text-xs">
-                  By: {campaign.owner.toString().slice(0, 8)}...{campaign.owner.toString().slice(-8)}
-                </span>
-              </div>
-            </div>
-            <div className="ml-4">
-              {campaign.isCompleted ? (
-                <span className="inline-flex items-center px-3 py-1 text-sm font-medium text-gray-500 bg-gray-100 rounded">
-                  Closed
-                </span>
-              ) : (
-                <button
-                  onClick={() => handleApply(campaign.id)}
-                  disabled={applying === campaign.id.toString()}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50"
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+      >
+        <Card className="neuro-card">
+          <CardHeader>
+            <CardTitle className="text-xl font-orbitron">Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-4">
+              <Link to="/explore-campaigns">
+                <Button className="cyber-button">
+                  <Search className="w-4 h-4 mr-2" />
+                  Browse Campaigns
+                </Button>
+              </Link>
+              
+              <Link to="/campaigns">
+                <Button 
+                  variant="outline" 
+                  className="border-cyber-pink text-cyber-pink hover:bg-cyber-pink hover:text-white"
                 >
-                  {applying === campaign.id.toString() ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Applying...
-                    </>
-                  ) : (
-                    'Apply Now'
-                  )}
-                </button>
-              )}
+                  <Star className="w-4 h-4 mr-2" />
+                  My Applications
+                </Button>
+              </Link>
+              
+              <Link to="/profile">
+                <Button 
+                  variant="outline" 
+                  className="border-purple-400 text-purple-400 hover:bg-purple-400 hover:text-black"
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Update Profile
+                </Button>
+              </Link>
             </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
+          </CardContent>
+        </Card>
+      </motion.div>
 
-interface AppliedCampaignsListProps {
-  campaigns: Campaign[];
-}
-
-const AppliedCampaignsList: React.FC<AppliedCampaignsListProps> = ({ campaigns }) => {
-  if (campaigns.length === 0) {
-    return (
-      <div className="p-6 text-center">
-        <div className="text-gray-400 text-4xl mb-4">📋</div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No applications yet</h3>
-        <p className="text-gray-500">Start by browsing available campaigns and applying to those that interest you.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="divide-y divide-gray-200">
-      {campaigns.map((campaign) => (
-        <div key={campaign.id.toString()} className="p-6">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center">
-                <h4 className="text-lg font-medium text-gray-900">{campaign.title}</h4>
-                <span className={`ml-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  campaign.isCompleted 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-yellow-100 text-yellow-800'
-                }`}>
-                  {campaign.isCompleted ? 'Completed' : 'In Progress'}
-                </span>
-              </div>
-              <p className="text-gray-600 mt-1">{campaign.description}</p>
-              <div className="flex items-center mt-2 text-sm text-gray-500">
-                <span>💰 {campaign.payout.toString()} ICP</span>
-                <span className="mx-2">•</span>
-                <span>👥 {campaign.applicants.length} total applicants</span>
-                <span className="mx-2">•</span>
-                <span className="font-mono text-xs">
-                  By: {campaign.owner.toString().slice(0, 8)}...{campaign.owner.toString().slice(-8)}
-                </span>
-              </div>
-            </div>
-            <div className="text-right">
-              {campaign.isCompleted ? (
-                <div className="text-sm">
-                  <div className="text-green-600 font-medium">✅ Completed</div>
-                  <div className="text-gray-500">Earned {campaign.payout.toString()} ICP</div>
-                </div>
-              ) : (
-                <div className="text-sm">
-                  <div className="text-yellow-600 font-medium">⏳ Pending</div>
-                  <div className="text-gray-500">Awaiting review</div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ))}
+      {/* Campaigns Tabs */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+      >
+        <Card className="neuro-card">
+          <CardHeader>
+            <CardTitle className="text-xl font-orbitron">Campaigns</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="available" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-cyber-gray/50">
+                <TabsTrigger 
+                  value="available" 
+                  className="data-[state=active]:bg-cyber-teal data-[state=active]:text-cyber-black font-orbitron"
+                >
+                  Available ({filteredAvailableCampaigns.length})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="applied" 
+                  className="data-[state=active]:bg-cyber-pink data-[state=active]:text-white font-orbitron"
+                >
+                  Applied ({appliedCampaigns.length})
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="available" className="space-y-4 mt-6">
+                {filteredAvailableCampaigns.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-6xl mb-4">🔍</div>
+                    <h3 className="text-xl font-orbitron font-bold mb-2 text-gray-300">
+                      No campaigns available
+                    </h3>
+                    <p className="text-gray-400 mb-6">Check back later for new opportunities.</p>
+                    <Link to="/explore-campaigns">
+                      <Button className="cyber-button">
+                        <Search className="w-4 h-4 mr-2" />
+                        Explore More
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {filteredAvailableCampaigns.slice(0, 5).map((campaign, index) => (
+                      <motion.div
+                        key={campaign.id.toString()}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.8 + index * 0.1 }}
+                        className="group"
+                      >
+                        <Card className="neuro-card-mini hover:shadow-cyber-glow transition-all duration-300">
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <h4 className="font-orbitron font-bold text-white group-hover:cyber-text-gradient transition-all duration-300">
+                                  {campaign.title}
+                                </h4>
+                                <p className="text-gray-400 text-sm mb-2 line-clamp-2">
+                                  {campaign.description}
+                                </p>
+                                <div className="flex items-center gap-4 text-sm">
+                                  <span className="text-cyber-teal font-medium">
+                                    {campaign.payout.toString()} tokens
+                                  </span>
+                                  <span className="text-gray-400">
+                                    {campaign.applicants.length} applicants
+                                  </span>
+                                  <Badge className="bg-green-500 text-white">
+                                    Available
+                                  </Badge>
+                                </div>
+                              </div>
+                              <Button 
+                                size="sm" 
+                                className="cyber-button"
+                                onClick={() => handleApplyToCampaign(campaign.id)}
+                              >
+                                Apply
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="applied" className="space-y-4 mt-6">
+                {appliedCampaigns.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-6xl mb-4">📋</div>
+                    <h3 className="text-xl font-orbitron font-bold mb-2 text-gray-300">
+                      No applications yet
+                    </h3>
+                    <p className="text-gray-400 mb-6">Start applying to campaigns to see them here.</p>
+                    <Link to="/explore-campaigns">
+                      <Button className="cyber-button">
+                        <Search className="w-4 h-4 mr-2" />
+                        Browse Campaigns
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {appliedCampaigns.map((campaign, index) => (
+                      <motion.div
+                        key={campaign.id.toString()}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.8 + index * 0.1 }}
+                        className="group"
+                      >
+                        <Card className="neuro-card-mini hover:shadow-cyber-glow transition-all duration-300">
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <h4 className="font-orbitron font-bold text-white group-hover:cyber-text-gradient transition-all duration-300">
+                                  {campaign.title}
+                                </h4>
+                                <p className="text-gray-400 text-sm mb-2 line-clamp-2">
+                                  {campaign.description}
+                                </p>
+                                <div className="flex items-center gap-4 text-sm">
+                                  <span className="text-cyber-teal font-medium">
+                                    {campaign.payout.toString()} tokens
+                                  </span>
+                                  <span className="text-gray-400">
+                                    {campaign.applicants.length} applicants
+                                  </span>
+                                  <Badge className={campaign.isCompleted ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'}>
+                                    {campaign.isCompleted ? 'Completed' : 'Pending'}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <Link to={`/campaigns/${campaign.id}`}>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="border-gray-600 text-gray-400 hover:text-white hover:border-gray-500"
+                                >
+                                  View
+                                </Button>
+                              </Link>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 };

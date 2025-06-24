@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useRoleAuth } from '../hooks/useRoleAuth';
 import { useNavigate } from 'react-router-dom';
-import { BrandOnboarding } from '../components/BrandOnboarding';
+import BrandOnboardingForm from '../components/BrandOnboardingForm';
 import { LoadingScreen } from '../components/LoadingScreen';
 
 export default function BrandOnboardingPage() {
@@ -47,6 +47,6 @@ export default function BrandOnboardingPage() {
   }
 
   return (
-    <BrandOnboarding onRegistrationComplete={handleRegistrationComplete} />
+    <BrandOnboardingForm onRegistrationComplete={handleRegistrationComplete} />
   );
 }

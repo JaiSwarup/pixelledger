@@ -1,9 +1,9 @@
-import React, { useRef } from "react";
+import React, { useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 // Remove the Sphere import
 import * as THREE from "three";
 
-const FloatingNode = ({ position }: { position: [number, number, number] }) => {
+const FloatingNode = React.memo(({ position }: { position: [number, number, number] }) => {
   const meshRef = useRef<THREE.Mesh>(null);
 
   useFrame((state) => {
@@ -27,18 +27,22 @@ const FloatingNode = ({ position }: { position: [number, number, number] }) => {
       />
     </mesh>
   );
-};
+});
+
+FloatingNode.displayName = 'FloatingNode';
 
 // ...existing code...
-const ThreeBackground = () => {
-  const nodes = Array.from(
-    { length: 20 },
-    (_, i) =>
-      [
-        (Math.random() - 0.5) * 10,
-        (Math.random() - 0.5) * 10,
-        (Math.random() - 0.5) * 10,
-      ] as [number, number, number]
+const ThreeBackground = React.memo(() => {
+  const nodes = useMemo(() => 
+    Array.from(
+      { length: 20 },
+      (_, i) =>
+        [
+          (Math.random() - 0.5) * 10,
+          (Math.random() - 0.5) * 10,
+          (Math.random() - 0.5) * 10,
+        ] as [number, number, number]
+    ), []
   );
 
   return (
@@ -58,6 +62,8 @@ const ThreeBackground = () => {
       </Canvas>
     </div>
   );
-};
+});
+
+ThreeBackground.displayName = 'ThreeBackground';
 
 export default ThreeBackground;

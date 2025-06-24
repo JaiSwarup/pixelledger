@@ -12,6 +12,7 @@ import Login from '../pages/Login';
 import Register from '../pages/Register';
 import BrandOnboardingPage from '../pages/BrandOnboardingPage';
 import InfluencerOnboardingPage from '../pages/InfluencerOnboardingPage';
+import CampaignsPage from '../pages/CampaignsPage';
 
 // Protected Components
 import { RoleNavigation } from './RoleNavigation';
@@ -20,6 +21,7 @@ import { RoleCampaignsView } from './RoleCampaignsView';
 import { RoleProfileView } from './RoleProfileView';
 import { RoleGovernanceView } from './RoleGovernanceView';
 import { RoleEscrowView } from './RoleEscrowView';
+import CampaignDetails from './CampaignDetails';
 
 interface AuthRouterProps {
   campaigns: any[];
@@ -48,10 +50,12 @@ export function AuthRouter({
   // Show loading while auth is initializing
   if (!isInitialized) {
     return (
-      <LoadingScreen 
-        message="Initializing BrandPool..."
-        submessage="Setting up your connection to the Internet Computer"
-      />
+      <div className="min-h-screen bg-cyber-black flex items-center justify-center">
+        <LoadingScreen 
+          message="Initializing BrandPool..."
+          submessage="Setting up your connection to the Internet Computer"
+        />
+      </div>
     );
   }
 
@@ -102,10 +106,12 @@ function ProtectedRoutes(props: Omit<AuthRouterProps, 'onDataUpdate' | 'onUserDa
   // Show loading while checking registration
   if (roleLoading) {
     return (
-      <LoadingScreen 
-        message="Checking your account..."
-        submessage="Verifying your registration status"
-      />
+      <div className="min-h-screen bg-cyber-black flex items-center justify-center">
+        <LoadingScreen 
+          message="Checking your account..."
+          submessage="Verifying your registration status"
+        />
+      </div>
     );
   }
 
@@ -117,19 +123,21 @@ function ProtectedRoutes(props: Omit<AuthRouterProps, 'onDataUpdate' | 'onUserDa
   // Show loading if backend actor not ready
   if (!props.backendActor) {
     return (
-      <LoadingScreen 
-        message="Connecting to backend..."
-        submessage="Establishing secure connection"
-      />
+      <div className="min-h-screen bg-cyber-black flex items-center justify-center">
+        <LoadingScreen 
+          message="Connecting to backend..."
+          submessage="Establishing secure connection"
+        />
+      </div>
     );
   }
 
   // Show authenticated app
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-cyber-black">
       <RoleNavigation userProfile={props.userProfile} userBalance={props.userBalance} />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="container mx-auto px-6 py-0">
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<RoleDashboard />} />
@@ -137,6 +145,24 @@ function ProtectedRoutes(props: Omit<AuthRouterProps, 'onDataUpdate' | 'onUserDa
             path="/campaigns" 
             element={
               <RoleCampaignsView 
+                campaigns={props.campaigns} 
+                onDataUpdate={props.onDataUpdate}
+              />
+            } 
+          />
+          <Route 
+            path="/explore-campaigns" 
+            element={
+              <CampaignsPage 
+                campaigns={props.campaigns} 
+                onDataUpdate={props.onDataUpdate}
+              />
+            } 
+          />
+          <Route 
+            path="/campaigns/:id" 
+            element={
+              <CampaignDetails 
                 campaigns={props.campaigns} 
                 onDataUpdate={props.onDataUpdate}
               />

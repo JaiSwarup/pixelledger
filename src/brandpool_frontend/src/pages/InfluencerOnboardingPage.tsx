@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useRoleAuth } from '../hooks/useRoleAuth';
 import { useNavigate } from 'react-router-dom';
-import { InfluencerOnboarding } from '../components/InfluencerOnboarding';
+import InfluencerOnboardingForm from '../components/InfluencerOnboardingForm';
 import { LoadingScreen } from '../components/LoadingScreen';
 
 export default function InfluencerOnboardingPage() {
@@ -47,6 +47,6 @@ export default function InfluencerOnboardingPage() {
   }
 
   return (
-    <InfluencerOnboarding onRegistrationComplete={handleRegistrationComplete} />
+    <InfluencerOnboardingForm onRegistrationComplete={handleRegistrationComplete} />
   );
 }
