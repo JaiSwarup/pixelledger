@@ -1,9 +1,25 @@
 {
+  "name": "pixelledger",
+  "version": "1.0.0",
+  "description": "PixelLedger - A creative services marketplace connecting clients with creative professionals on the decentralized web",
+  "author": "Jai Swarup",
+  "license": "MIT",
+  "keywords": [
+    "creative",
+    "marketplace",
+    "web3",
+    "decentralized",
+    "icp",
+    "motoko"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JaiSwarup/pixelledger.git"
+  },
   "engines": {
     "node": ">=16.0.0",
     "npm": ">=7.0.0"
   },
-  "name": "brandpool",
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "prebuild": "npm run prebuild --workspaces --if-present",
@@ -13,7 +29,7 @@
   },
   "type": "module",
   "workspaces": [
-    "src/brandpool_frontend"
+    "src/pixelledger_frontend"
   ],
   "dependencies": {
     "@hookform/resolvers": "^5.1.1"

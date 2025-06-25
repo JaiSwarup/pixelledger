@@ -1,18 +1,18 @@
 {
   "canisters": {
-    "brandpool_backend": {
-      "main": "src/brandpool_backend/main.mo",
+    "pixelledger_backend": {
+      "main": "src/pixelledger_backend/main.mo",
       "type": "motoko"
     },
-    "brandpool_frontend": {
+    "pixelledger_frontend": {
       "dependencies": [
-        "brandpool_backend"
+        "pixelledger_backend"
       ],
       "source": [
-        "src/brandpool_frontend/dist"
+        "src/pixelledger_frontend/dist"
       ],
       "type": "assets",
-      "workspace": "brandpool_frontend"
+      "workspace": "pixelledger_frontend"
     },
     "internet_identity": {
       "candid": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity.did",

@@ -1,6 +1,6 @@
-# Test Configuration for BrandPool
+# Test Configuration for PixelLedger
 
-This directory contains unit tests for the BrandPool project.
+This directory contains unit tests for the PixelLedger project.
 
 ## Test Structure
 

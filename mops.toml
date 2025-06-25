@@ -1,3 +1,10 @@
+[package]
+name = "pixelledger"
+version = "1.0.0"
+description = "PixelLedger backend - A creative services marketplace on the Internet Computer"
+author = "PixelLedger Team"
+license = "MIT"
+
 [dependencies]
 base = "0.14.9"
 map = "9.0.1"

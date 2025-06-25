@@ -1,4 +1,4 @@
-# BrandPool Optimized Authentication & Caching System
+# PixelLedger Optimized Authentication & Caching System
 
 This document explains the new Zustand-based authentication and caching system implemented to improve performance and user experience.
 
