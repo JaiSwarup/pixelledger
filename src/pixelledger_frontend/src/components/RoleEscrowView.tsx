@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Wallet, TrendingUp, Clock, CheckCircle, AlertCircle, DollarSign, Send, ArrowDown, ArrowUp } from 'lucide-react';
 import ThreeBackground from './ThreeBackground';
+import { pixelledger_backend } from 'declarations/pixelledger_backend';
 import { toast } from 'sonner';
 
 interface RoleEscrowViewProps {
@@ -20,11 +21,11 @@ interface RoleEscrowViewProps {
   userPrincipal: Principal | null;
   userBalance: bigint;
   onBalanceUpdate: (principal: Principal) => void;
-  backendActor: any;
+  backendActor: typeof pixelledger_backend;
 }
 
 export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalanceUpdate, backendActor }: RoleEscrowViewProps) {
-  const { isClient, isCreative, userAccount } = useRoleAuth();
+  const { isClient, isCreative } = useRoleAuth();
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [depositAmount, setDepositAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -108,10 +109,18 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
     const balances: {[key: string]: bigint} = {};
     for (const project of ProjectsToCheck) {
       try {
-        const balance = await backendActor.getEscrowBalance(project.id);
-        balances[project.id.toString()] = balance;
+        const result = await backendActor.getEscrowBalance(project.id);
+        if ('ok' in result) {
+          balances[project.id.toString()] = result.ok;
+        } else {
+          toast.error(`Error loading escrow balance for project ${project.id}:`);
+          balances[project.id.toString()] = BigInt(0);
+        }
       } catch (error) {
-        console.error(`Error loading escrow balance for project ${project.id}:`, error);
+        if (error instanceof Error) {
+          toast.error(`Error loading escrow balance for project ${project.id}: ${error.message}`);
+        } else 
+          toast.error(`Error loading escrow balance for project ${project.id}:`);
         balances[project.id.toString()] = BigInt(0);
       }
     }
@@ -153,8 +162,7 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
         toast.error('Error depositing to escrow: ' + result.err);
       }
     } catch (error) {
-      console.error('Error depositing to escrow:', error);
-      toast.error('Error depositing to escrow');
+      toast.error('Error depositing to escrow: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsLoading(false);
     }
@@ -173,8 +181,11 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
         toast.error('Error releasing funds: ' + result.err);
       }
     } catch (error) {
-      console.error('Error releasing funds:', error);
-      toast.error('Error releasing funds');
+      if (error instanceof Error) {
+        toast.error('Error releasing funds: ' + error.message);
+      } else {
+        toast.error('Error releasing funds');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -185,7 +196,7 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
 
     setIsLoading(true);
     try {
-      const result = await backendActor.withdrawFromEscrow(projectId);
+      const result = await backendActor.withdrawEscrow(projectId);
       if ('ok' in result) {
         toast.success('Funds withdrawn from escrow successfully!');
         onBalanceUpdate(userPrincipal);
@@ -194,8 +205,11 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
         toast.error('Error withdrawing from escrow: ' + result.err);
       }
     } catch (error) {
-      console.error('Error withdrawing from escrow:', error);
-      toast.error('Error withdrawing from escrow');
+      if (error instanceof Error) {
+        toast.error('Error withdrawing from escrow: ' + error.message);
+      } else {
+        toast.error('Error withdrawing from escrow');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -475,6 +489,21 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
                                     Withdraw
                                   </Button>
                                 </div>
+                                {project.selectedCreative && project.selectedCreative.length > 0 && !project.isCompleted && getEscrowBalance(project.id) > BigInt(0) && (
+                                  <div className="pt-3 border-t border-gray-600">
+                                    <p className="text-sm text-gray-400 mb-3">
+                                      Selected creative: {project.selectedCreative[0]?.toString()}
+                                    </p>
+                                    <Button 
+                                      className="w-full bg-green-600 hover:bg-green-700 text-white"
+                                      onClick={() => project.selectedCreative?.[0] && handleReleaseFunds(project.id, project.selectedCreative[0])}
+                                      disabled={isLoading}
+                                    >
+                                      <Send className="w-4 h-4 mr-2" />
+                                      Release Funds to Creative
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
                             </DialogContent>
                           </Dialog>
@@ -588,7 +617,7 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-cyber-pink">{stats.selectedProjects}</div>
-                <p className="text-gray-400 text-sm">You've been chosen for</p>
+                <p className="text-gray-400 text-sm">You&apos;ve been chosen for</p>
               </CardContent>
             </Card>
 
@@ -676,7 +705,7 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
                             <div className="bg-cyber-teal/10 border border-cyber-teal/30 rounded-lg p-4">
                               <div className="flex items-center gap-2">
                                 <CheckCircle className="w-5 h-5 text-cyber-teal" />
-                                <p className="text-cyber-teal font-medium">You've been selected!</p>
+                                <p className="text-cyber-teal font-medium">You&apos;ve been selected!</p>
                               </div>
                               <p className="text-gray-300 mt-2 text-sm">
                                 Complete the project requirements to receive your payment.

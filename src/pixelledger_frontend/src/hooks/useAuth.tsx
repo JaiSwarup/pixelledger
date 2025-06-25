@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { AuthClient } from '@dfinity/auth-client';
 import { Identity } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -37,24 +38,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setAuthClient(client);
 
         const isAuthenticated = await client.isAuthenticated();
-        console.log('Auth initialization - isAuthenticated:', isAuthenticated);
+        // console.log('Auth initialization - isAuthenticated:', isAuthenticated);
         
         if (isAuthenticated) {
           const identity = client.getIdentity();
           const principal = identity.getPrincipal();
           
-          console.log('=== EXISTING AUTH FOUND ===');
-          console.log('Principal:', principal.toString());
-          console.log('========================');
+          // console.log('=== EXISTING AUTH FOUND ===');
+          // console.log('Principal:', principal.toString());
+          // console.log('========================');
           
           setIsAuthenticated(true);
           setIdentity(identity);
           setPrincipal(principal);
         } else {
-          console.log('No existing authentication found');
+          toast.info('You are not authenticated. Please log in to continue.');
         }
       } catch (error) {
-        console.error('Error initializing auth client:', error);
+        if (error instanceof Error) {
+          toast.error(`Error initializing auth client: ${error.message}`);
+        } else if (typeof error === 'string') {
+          toast.error(`Error initializing auth client: ${error}`);
+        } else {
+          toast.error('Error initializing auth client: Unknown error');
+        }
         setLoginError('Failed to initialize authentication');
       } finally {
         setIsInitialized(true);
@@ -79,11 +86,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const identity = authClient.getIdentity();
           const principal = identity.getPrincipal();
           
-          console.log('=== LOGIN SUCCESSFUL ===');
-          console.log('Principal:', principal.toString());
-          console.log('Principal toText():', principal.toText());
-          console.log('Identity type:', typeof identity);
-          console.log('========================');
+          // console.log('=== LOGIN SUCCESSFUL ===');
+          // console.log('Principal:', principal.toString());
+          // console.log('Principal toText():', principal.toText());
+          // console.log('Identity type:', typeof identity);
+          // console.log('========================');
           
           setIsAuthenticated(true);
           setIdentity(identity);
@@ -92,13 +99,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setLoginError(null);
         },
         onError: (error) => {
-          console.error('Login error:', error);
+          if (error) {
+            toast.error(`Login error: ${error}`);
+          } else {
+            toast.error('Login error: Unknown error');
+          }
           setLoginError('Failed to authenticate with Internet Identity');
           setIsLoading(false);
         }
       });
     } catch (error) {
-      console.error('Login error:', error);
+      toast.error(`Login error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setLoginError('Authentication failed. Please try again.');
       setIsLoading(false);
     }
@@ -117,7 +128,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Force a page reload to clear all application state
       window.location.reload();
     } catch (error) {
-      console.error('Logout error:', error);
+      if  (error instanceof Error) {
+        toast.error(`Logout error: ${error.message}`);
+      }
+      else if (typeof error === 'string') {
+        toast.error(`Logout error: ${error}`);
+      }
+      else {
+        toast.error('Logout error: Unknown error');
+      }
     } finally {
       setIsLoading(false);
     }

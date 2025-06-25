@@ -14,7 +14,7 @@ interface ProjectsPageProps {
 const ProjectsPage = ({ projects, onDataUpdate }: ProjectsPageProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('All');
-  const { userAccount, isClient, isCreative } = useRoleAuth();
+  const { isClient } = useRoleAuth();
 
   // Filter projects based on search and filters
   const filteredProjects = projects.filter(project => {

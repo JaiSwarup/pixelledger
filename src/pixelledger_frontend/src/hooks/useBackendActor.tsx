@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { createActor, pixelledger_backend } from 'declarations/pixelledger_backend';
 import { useAuth } from './useAuth';
+import { HttpAgentOptions } from '@dfinity/agent';
+import { toast } from 'sonner';
 
 interface BackendActorContextType {
   backendActor: typeof pixelledger_backend;
@@ -23,10 +25,10 @@ export function BackendActorProvider({ children }: BackendActorProviderProps) {
                         || process.env.CANISTER_ID_PIXELLEDGER_BACKEND
                         || 'rdmx6-jaaaa-aaaaa-aaadq-cai'; // Default local development canister ID
       
-      console.log('BackendActorProvider: Creating actor with canister ID:', canisterId, 'for principal:', principal?.toString());
+      // console.log('BackendActorProvider: Creating actor with canister ID:', canisterId, 'for principal:', principal?.toString());
 
       try {
-        const agentOptions: any = { identity };
+        const agentOptions: HttpAgentOptions = { identity };
         
         // Only set host for production environment
         if (import.meta.env.DFX_NETWORK === "ic") {
@@ -37,14 +39,18 @@ export function BackendActorProvider({ children }: BackendActorProviderProps) {
           agentOptions,
         });
         setBackendActor(actor);
-        console.log('BackendActorProvider: Successfully created authenticated actor for principal:', principal?.toString());
+        // console.log('BackendActorProvider: Successfully created authenticated actor for principal:', principal?.toString());
       } catch (error) {
-        console.error('BackendActorProvider: Error creating authenticated actor:', error);
+        if (error instanceof Error) {
+          toast.error(`Failed to create backend actor: ${error.message}`)
+        } else {
+          toast.error('Failed to create backend actor: Unknown error');
+        }
         // Fallback to default actor
         setBackendActor(pixelledger_backend);
       }
     } else {
-      console.log('BackendActorProvider: Using default actor (not authenticated)');
+      // console.log('BackendActorProvider: Using default actor (not authenticated)');
       setBackendActor(pixelledger_backend);
     }
   }, [identity, isAuthenticated, principal]);

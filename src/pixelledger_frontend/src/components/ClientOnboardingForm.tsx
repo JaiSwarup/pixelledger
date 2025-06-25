@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { Building2, Globe, Users, Target, ArrowRight, ArrowLeft } from 'lucide-react';
-import { useForm, Controller, SubmitHandler } from 'react-hook-form';
+import { Building2,  Users, Target, ArrowRight, ArrowLeft } from 'lucide-react';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '../hooks/useAuth';
@@ -14,7 +14,6 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Checkbox } from './ui/checkbox';
-import { Label } from './ui/label';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from './ui/form';
 import ThreeBackground from './ThreeBackground';
 import { toast } from 'sonner';
@@ -85,7 +84,7 @@ interface ClientOnboardingFormProps {
 
 const ClientOnboardingForm: React.FC<ClientOnboardingFormProps> = ({ onRegistrationComplete }) => {
   const navigate = useNavigate();
-  const { isAuthenticated, principal } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { registerUser, loading } = useRoleAuth();
   const { validateClientInfo } = useRoleValidation();
   
@@ -149,10 +148,7 @@ const ClientOnboardingForm: React.FC<ClientOnboardingFormProps> = ({ onRegistrat
         onRegistrationComplete();
       }
     } catch (error) {
-      console.error('Registration failed:', error);
-      toast.error("Registration Failed", {
-        description: "There was an error creating your profile. Please try again."
-      });
+      toast.error("Registration Error" +  (error instanceof Error ? `: ${error.message}` : ''));
     }
   };
 

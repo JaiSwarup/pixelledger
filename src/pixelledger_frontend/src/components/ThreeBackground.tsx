@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unknown-property */
 import React, { useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 // Remove the Sphere import
@@ -36,7 +37,7 @@ const ThreeBackground = React.memo(() => {
   const nodes = useMemo(() => 
     Array.from(
       { length: 20 },
-      (_, i) =>
+      () =>
         [
           (Math.random() - 0.5) * 10,
           (Math.random() - 0.5) * 10,

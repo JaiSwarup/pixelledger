@@ -13,6 +13,7 @@ import Register from '../pages/Register';
 import ClientOnboardingPage from '../pages/ClientOnboardingPage';
 import CreativeOnboardingPage from '../pages/CreativeOnboardingPage';
 import ProjectsPage from '../pages/ProjectsPage';
+import UserProfilePage from '../pages/UserProfilePage';
 
 // Protected Components
 import { RoleNavigation } from './RoleNavigation';
@@ -22,14 +23,17 @@ import { RoleProfileView } from './RoleProfileView';
 import { RoleGovernanceView } from './RoleGovernanceView';
 import { RoleEscrowView } from './RoleEscrowView';
 import ProjectDetails from './ProjectDetails';
+import { Profile, Project, Proposal } from 'declarations/pixelledger_backend/pixelledger_backend.did';
+import { Principal } from '@dfinity/principal';
+import { pixelledger_backend } from 'declarations/pixelledger_backend';
 
 interface AuthRouterProps {
-  projects: any[];
-  proposals: any[];
-  userProfile: any;
+  projects: Project[];
+  proposals: Proposal[];
+  userProfile: Profile | null;
   userBalance: bigint;
-  principal: any;
-  backendActor: any;
+  principal: Principal | null;
+  backendActor: typeof pixelledger_backend;
   onDataUpdate: () => void;
   onUserDataUpdate: () => void;
 }
@@ -44,8 +48,7 @@ export function AuthRouter({
   onDataUpdate,
   onUserDataUpdate
 }: AuthRouterProps) {
-  const { isAuthenticated, isInitialized, loginError } = useAuth();
-  const { isRegistered, loading: roleLoading } = useRoleAuth();
+  const { isInitialized } = useAuth();
 
   // Show loading while auth is initializing
   if (!isInitialized) {
@@ -95,7 +98,7 @@ function ProtectedRoutes(props: Omit<AuthRouterProps, 'onDataUpdate' | 'onUserDa
   onDataUpdate: () => void;
   onUserDataUpdate: () => void;
 }) {
-  const { isAuthenticated, loginError } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { isRegistered, loading: roleLoading } = useRoleAuth();
 
   // Redirect to login if not authenticated
@@ -120,8 +123,8 @@ function ProtectedRoutes(props: Omit<AuthRouterProps, 'onDataUpdate' | 'onUserDa
     return <Navigate to="/register" replace />;
   }
 
-  // Show loading if backend actor not ready
-  if (!props.backendActor) {
+  // Show loading if backend actor not ready or we don't have principal for authenticated users
+  if (!props.backendActor || (isAuthenticated && !props.principal)) {
     return (
       <div className="min-h-screen bg-cyber-black flex items-center justify-center">
         <LoadingScreen 
@@ -172,8 +175,8 @@ function ProtectedRoutes(props: Omit<AuthRouterProps, 'onDataUpdate' | 'onUserDa
             path="/profile" 
             element={
               <RoleProfileView 
-                userProfile={props.userProfile} 
-                userPrincipal={props.principal}
+                userProfile={props.userProfile!} 
+                userPrincipal={props.principal!}
                 onProfileUpdate={props.onUserDataUpdate}
                 backendActor={props.backendActor}
               />
@@ -184,7 +187,7 @@ function ProtectedRoutes(props: Omit<AuthRouterProps, 'onDataUpdate' | 'onUserDa
             element={
               <RoleGovernanceView 
                 proposals={props.proposals} 
-                userPrincipal={props.principal}
+                userPrincipal={props.principal!}
                 userBalance={props.userBalance}
                 onProposalsUpdate={props.onDataUpdate}
                 backendActor={props.backendActor}
@@ -196,13 +199,14 @@ function ProtectedRoutes(props: Omit<AuthRouterProps, 'onDataUpdate' | 'onUserDa
             element={
               <RoleEscrowView 
                 projects={props.projects} 
-                userPrincipal={props.principal}
+                userPrincipal={props.principal!}
                 userBalance={props.userBalance}
                 onBalanceUpdate={props.onUserDataUpdate}
                 backendActor={props.backendActor}
               />
             } 
           />
+          <Route path="/users/:id" element={<UserProfilePage />} />
           
           {/* Catch all - redirect to dashboard */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

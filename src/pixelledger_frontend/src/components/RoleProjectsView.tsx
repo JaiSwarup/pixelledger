@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Project } from '../../../declarations/pixelledger_backend/pixelledger_backend.did';
 import { useRoleAuth } from '../hooks/useRoleAuth';
 import { useBackendActor } from '../hooks/useBackendActor';
 import ProjectCard from './ProjectCard';
-import FilterBar from './FilterBar';
+import { toast } from 'sonner';
 
 interface RoleProjectsViewProps {
   projects: Project[];
@@ -58,7 +58,6 @@ export const RoleProjectsView: React.FC<RoleProjectsViewProps> = ({ projects, on
     setError(null);
 
     try {
-      console.log('Creating project with authenticated backend actor...');
       const projectInput = {
         title: newProject.title,
         description: newProject.description,
@@ -71,10 +70,10 @@ export const RoleProjectsView: React.FC<RoleProjectsViewProps> = ({ projects, on
         setShowCreateForm(false);
         onDataUpdate();
       } else {
-        setError('Error creating project: ' + result.err);
+        toast.error('Errr creating project')
       }
     } catch (error) {
-      console.error('Error creating project:', error);
+      toast.error('Failed to create project' +  (error instanceof Error ? `: ${error.message}` : ''));
       setError('Failed to create project');
     } finally {
       setLoading(false);

@@ -12,13 +12,15 @@ import { Progress } from './ui/progress';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Vote, Users, TrendingUp, Clock, Shield, Zap, Settings } from 'lucide-react';
+import { pixelledger_backend } from 'declarations/pixelledger_backend';
+import { toast } from 'sonner';
 
 interface RoleGovernanceViewProps {
   proposals: Proposal[];
   userPrincipal: Principal | null;
   userBalance: bigint;
   onProposalsUpdate: () => void;
-  backendActor: any;
+  backendActor: typeof pixelledger_backend;
 }
 
 export function RoleGovernanceView({ proposals, userPrincipal, userBalance, onProposalsUpdate, backendActor }: RoleGovernanceViewProps) {
@@ -33,7 +35,6 @@ export function RoleGovernanceView({ proposals, userPrincipal, userBalance, onPr
     votingDurationHours: '24'
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [votingPowers, setVotingPowers] = useState<{[key: string]: bigint}>({});
 
   // Load user stake information
   useEffect(() => {
@@ -49,7 +50,11 @@ export function RoleGovernanceView({ proposals, userPrincipal, userBalance, onPr
       const stake = await backendActor.getUserStake(userPrincipal);
       setUserStake(stake);
     } catch (error) {
-      console.error('Error loading user stake:', error);
+      if (error instanceof Error) {
+        toast.error(`Error loading user stake: ${error.message}`);
+      } else {
+        toast.error('Error loading user stake: Internal Error');
+      }
     }
   };
 
@@ -89,11 +94,10 @@ export function RoleGovernanceView({ proposals, userPrincipal, userBalance, onPr
         setShowCreateForm(false);
         onProposalsUpdate();
       } else {
-        alert('Error creating proposal: ' + result.err);
+        toast.error('Error creating proposal: ' + result.err);
       }
     } catch (error) {
-      console.error('Error creating proposal:', error);
-      alert('Error creating proposal');
+      toast.error('Error creating proposal: ' + (error instanceof Error ? error.message : 'Internal Error'));
     } finally {
       setIsLoading(false);
     }
@@ -109,15 +113,16 @@ export function RoleGovernanceView({ proposals, userPrincipal, userBalance, onPr
     }
 
     try {
-      const result = await backendActor.voteOnProposal(proposalId, support);
+      const result = await backendActor.vote(proposalId, support);
       if ('ok' in result) {
         onProposalsUpdate();
       } else {
         alert('Error voting: ' + result.err);
       }
     } catch (error) {
-      console.error('Error voting:', error);
-      alert('Error voting on proposal');
+      if (error instanceof Error) {
+        toast.error(`Error voting: ${error.message}`);
+      } else toast.error('Error voting: Internal Error');
     }
   };
 
@@ -138,7 +143,7 @@ export function RoleGovernanceView({ proposals, userPrincipal, userBalance, onPr
 
     setIsLoading(true);
     try {
-      const result = await backendActor.stakeTokens(amount);
+      const result = await backendActor.stake(amount);
       if ('ok' in result) {
         setStakeAmount('');
         setShowStakeForm(false);
@@ -148,8 +153,7 @@ export function RoleGovernanceView({ proposals, userPrincipal, userBalance, onPr
         alert('Error staking tokens: ' + result.err);
       }
     } catch (error) {
-      console.error('Error staking tokens:', error);
-      alert('Error staking tokens');
+      toast.error('Error staking tokens: ' + (error instanceof Error ? error.message : 'Internal Error'));
     } finally {
       setIsLoading(false);
     }

@@ -74,7 +74,7 @@ const LandingPage = () => {
             >
               <Link to="/creatives">
                 <Button size="lg" className="cyber-button text-lg px-8 py-4 group">
-                  I'm a Creative
+                  I&apos;m a Creative
                   <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
@@ -85,7 +85,7 @@ const LandingPage = () => {
                   variant="outline" 
                   className="text-lg px-8 py-4 border-2 border-cyber-teal text-cyber-teal hover:bg-cyber-teal hover:text-cyber-black transition-all duration-300"
                 >
-                  I'm a Client
+                  I&apos;m a Client
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>

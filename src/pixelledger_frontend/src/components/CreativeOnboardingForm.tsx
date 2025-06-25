@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { Users, Star, Camera, Globe, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Users, Star, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -48,7 +48,7 @@ interface CreativeOnboardingFormProps {
 
 const CreativeOnboardingForm: React.FC<CreativeOnboardingFormProps> = ({ onRegistrationComplete }) => {
   const navigate = useNavigate();
-  const { isAuthenticated, principal } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { registerUser, loading } = useRoleAuth();
   const { validateCreativeInfo } = useRoleValidation();
   
@@ -110,10 +110,7 @@ const CreativeOnboardingForm: React.FC<CreativeOnboardingFormProps> = ({ onRegis
         onRegistrationComplete();
       }
     } catch (error) {
-      console.error('Registration failed:', error);
-      toast.error("Registration Failed", {
-        description: "There was an error creating your profile. Please try again."
-      });
+      toast.error("Registration Error" +  (error instanceof Error ? `: ${error.message}` : ''));
     }
   };
 

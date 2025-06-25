@@ -19,6 +19,7 @@ module {
           budget = input.budget;
           owner = caller;
           applicants = []; // Initialize as empty Principal array
+          selectedCreative = null; // Initialize as no selected creative
           isCompleted = false;
         };
 
@@ -50,6 +51,7 @@ module {
             budget = project.budget;
             owner = project.owner;
             applicants = applicants; // Use real applicant data
+            selectedCreative = project.selectedCreative;
             isCompleted = project.isCompleted;
           }
         });
@@ -76,6 +78,7 @@ module {
               budget = project.budget;
               owner = project.owner;
               applicants = applicants; // Use real applicant data
+              selectedCreative = project.selectedCreative;
               isCompleted = project.isCompleted;
             };
             #ok(updatedProject)
@@ -138,6 +141,7 @@ module {
             budget = project.budget;
             owner = project.owner;
             applicants = applicants;
+            selectedCreative = project.selectedCreative;
             isCompleted = project.isCompleted;
           }
         });
@@ -168,6 +172,7 @@ module {
             budget = project.budget;
             owner = project.owner;
             applicants = applicants;
+            selectedCreative = project.selectedCreative;
             isCompleted = project.isCompleted;
           }
         });
@@ -243,6 +248,7 @@ module {
             budget = project.budget;
             owner = project.owner;
             applicants = applicants;
+            selectedCreative = project.selectedCreative;
             isCompleted = project.isCompleted;
           }
         });
@@ -305,6 +311,7 @@ module {
                 budget = project.budget;
                 owner = project.owner;
                 applicants = project.applicants;
+                selectedCreative = project.selectedCreative;
                 isCompleted = true;
               };
               
@@ -350,6 +357,52 @@ module {
                 case (?approved) { approved };
               };
               #ok(approved)
+            }
+          };
+        }
+      })
+    };
+
+    // Select a creative for a project - only project owner can select
+    public func selectCreative(caller: Principal, projectId: Nat, creative: Principal) : Types.AuthResult<Text> {
+      authManager.withClientAuth<Text>(caller, func(account: Types.UserAccount) : Types.AuthResult<Text> {
+        switch (Map.get(storage.projects, Map.nhash, projectId)) {
+          case null { #err(#Unauthorized("Project not found")) };
+          case (?project) {
+            if (not Principal.equal(project.owner, caller)) {
+              #err(#Unauthorized("Only project owner can select creative"))
+            } else {
+              // Check if the creative is an approved applicant
+              let approved = switch (Map.get(storage.approvedApplicants, Map.nhash, projectId)) {
+                case null { [] };
+                case (?approved) { approved };
+              };
+              
+              let isApproved = switch (Array.find<Principal>(approved, func(p: Principal) : Bool {
+                Principal.equal(p, creative)
+              })) {
+                case (?_) { true };
+                case null { false };
+              };
+              
+              if (not isApproved) {
+                #err(#Unauthorized("Creative must be an approved applicant"))
+              } else {
+                // Update the project with the selected creative
+                let updatedProject = {
+                  id = project.id;
+                  title = project.title;
+                  description = project.description;
+                  budget = project.budget;
+                  owner = project.owner;
+                  applicants = project.applicants;
+                  selectedCreative = ?creative;
+                  isCompleted = project.isCompleted;
+                };
+                
+                Map.set(storage.projects, Map.nhash, projectId, updatedProject);
+                #ok("Creative selected successfully")
+              }
             }
           };
         }

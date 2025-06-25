@@ -178,5 +178,49 @@ module {
         };
       }
     };
+
+    // Release funds from escrow to a specific creative (manual release by project owner)
+    public func releaseFunds(caller: Principal, projectId: Nat, creativePrincipal: Principal) : Types.EscrowResult<Text> {
+      // Use proper authorization - only Clients can release funds
+      switch (authManager.requireClient(caller)) {
+        case (#err(_)) { #err("Only Client users can release funds") };
+        case (#ok(_)) {
+          // Check if project exists
+          switch (Map.get(storage.projects, Map.nhash, projectId)) {
+            case null { #err("Project not found") };
+            case (?project) {
+              // Only project owner can release funds
+              if (not Principal.equal(caller, project.owner)) {
+                #err("Only project owner can release funds")
+              } else {
+                // Check if there's any escrow balance
+                let escrowBalance = switch (Map.get(storage.escrowBalances, Map.nhash, projectId)) {
+                  case null { 0 };
+                  case (?balance) { balance };
+                };
+
+                if (escrowBalance == 0) {
+                  #err("No escrow balance for this project")
+                } else {
+                  // Transfer funds from escrow to creative
+                  let currentCreativeBalance = switch (Map.get(storage.userBalances, Map.phash, creativePrincipal)) {
+                    case null { 0 };
+                    case (?balance) { balance };
+                  };
+
+                  // Update creative balance
+                  Map.set(storage.userBalances, Map.phash, creativePrincipal, currentCreativeBalance + escrowBalance);
+                  
+                  // Clear escrow balance
+                  Map.set(storage.escrowBalances, Map.nhash, projectId, 0);
+                  
+                  #ok("Released " # Nat.toText(escrowBalance) # " tokens to creative " # Principal.toText(creativePrincipal))
+                }
+              }
+            };
+          };
+        };
+      }
+    };
   }
 }

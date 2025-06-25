@@ -7,8 +7,10 @@ import type {
   ClientInfo, 
   CreativeInfo, 
   Profile, 
-  VerificationStatus 
+  VerificationStatus, 
+  ProjectInput
 } from 'declarations/pixelledger_backend/pixelledger_backend.did';
+import { toast } from 'sonner';
 
 export interface AuthError {
   Unauthorized?: string;
@@ -33,41 +35,45 @@ export const useRoleAuth = () => {
       setLoading(true);
 
       if (!isAuthenticated || !principal || !backendActor) {
-        console.log('useRoleAuth: Not authenticated, no principal, or no backend actor');
+        // console.log('useRoleAuth: Not authenticated, no principal, or no backend actor');
         setLoading(false);
         return;
       }
 
-      console.log('useRoleAuth: Checking registration status for principal:', principal.toString());
+      // console.log('useRoleAuth: Checking registration status for principal:', principal.toString());
 
       try {
         // First check if user is registered
         const isRegistered = await backendActor.isUserRegistered(principal);
-        console.log('useRoleAuth: isUserRegistered result:', isRegistered);
+        // console.log('useRoleAuth: isUserRegistered result:', isRegistered);
         
         if (isRegistered) {
           // User is registered, fetch their account details
           const result = await backendActor.getMyAccount();
-          console.log('useRoleAuth: getMyAccount result:', result);
+          // console.log('useRoleAuth: getMyAccount result:', result);
           
           if ('ok' in result) {
             setUserAccount(result.ok);
             setError(null);
-            console.log('useRoleAuth: Set user account:', result.ok);
+            // console.log('useRoleAuth: Set user account:', result.ok);
           } else {
             // User is registered but can't fetch account (shouldn't happen)
-            console.warn('useRoleAuth: User is registered but getMyAccount failed:', result.err);
+            // console.warn('useRoleAuth: User is registered but getMyAccount failed:', result.err);
             setError(result.err);
             setUserAccount(null);
           }
         } else {
           // User is not registered
-          console.log('useRoleAuth: User is not registered');
+          // console.log('useRoleAuth: User is not registered');
           setUserAccount(null);
           setError(null);
         }
       } catch (err) {
-        console.error('useRoleAuth: Failed to check user registration:', err);
+         if  (err instanceof Error) {
+          toast.error('useRoleAuth: Failed to check user registration: ' + err.message);
+        } else {
+          toast.error('useRoleAuth: Failed to check user registration: An unexpected error occurred');
+        }
         setError('Failed to check user registration');
         setUserAccount(null);
       } finally {
@@ -173,9 +179,14 @@ export const useRoleAuth = () => {
         return { success: false, error: result.err };
       }
     } catch (err) {
-      const errorMessage = 'Failed to register user';
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
+      if (err instanceof Error) {
+        setError(err.message);
+        return { success: false, error: err.message };
+      } else {
+        const errorMessage = 'Failed to register user';
+        setError(errorMessage);
+        return { success: false, error: errorMessage };
+      }
     }
   };
 
@@ -273,7 +284,7 @@ export const useRoleValidation = () => {
     return errors;
   };
 
-  const validateProjectInput = (project: any) => {
+  const validateProjectInput = (project: ProjectInput) => {
     const errors: string[] = [];
 
     if (!project.title || project.title.trim() === '') {

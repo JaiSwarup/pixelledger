@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Edit2, Star, Calendar, DollarSign, Award, Settings, User, Briefcase, MapPin, Globe, Users } from 'lucide-react';
+import { Edit2, Star, DollarSign, Award, Settings, User, Briefcase, Globe, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,6 +10,7 @@ import { Profile, Project } from '../../../declarations/pixelledger_backend/pixe
 import { Principal } from '@dfinity/principal';
 import { getClientInfo, getCreativeInfo, useRoleAuth } from '../hooks/useRoleAuth';
 import { pixelledger_backend } from 'declarations/pixelledger_backend';
+import { toast } from 'sonner';
 
 interface RoleProfileViewProps {
   userProfile: Profile | null;
@@ -18,8 +19,8 @@ interface RoleProfileViewProps {
   backendActor: typeof pixelledger_backend | null;
 }
 
-export function RoleProfileView({ userProfile, userPrincipal, onProfileUpdate, backendActor }: RoleProfileViewProps) {
-  const { userAccount, isClient, isCreative, loading, getRoleDisplayName } = useRoleAuth();
+export function RoleProfileView({ userProfile, userPrincipal: _userPrincipal, onProfileUpdate: _onProfileUpdate, backendActor }: RoleProfileViewProps) {
+  const { userAccount, isClient, loading, getRoleDisplayName } = useRoleAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [projects, setProjects] = useState<Project[]>([]);
 
@@ -31,7 +32,13 @@ export function RoleProfileView({ userProfile, userPrincipal, onProfileUpdate, b
           const result = await backendActor.getProjects();
           setProjects(result);
         } catch (error) {
-          console.error('Error loading projects:', error);
+          if (error instanceof Error) {
+            toast.error(`Error loading projects: ${error.message}`);
+          } else if (typeof error === 'string') {
+            toast.error(`Error loading projects: ${error}`);
+          } else {
+            toast.error('An unknown error occurred while loading projects.');
+          }
         }
       }
     };

@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useRoleAuth, ErrorDisplay } from '../hooks/useRoleAuth';
+import { useRoleAuth } from '../hooks/useRoleAuth';
 import { useBackendActor } from '../hooks/useBackendActor';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckCircle, Clock, DollarSign, Send, Users, BarChart3, TrendingUp, Star, Search, Trophy } from 'lucide-react';
+import { Clock, DollarSign, Send, Users, Star, Search, Trophy } from 'lucide-react';
 import type { Project } from '../../../declarations/pixelledger_backend/pixelledger_backend.did';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export const CreativeDashboard: React.FC = () => {
   const { userAccount } = useRoleAuth();
@@ -18,7 +18,6 @@ export const CreativeDashboard: React.FC = () => {
   const [appliedProjects, setAppliedProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'available' | 'applied'>('available');
   const [stats, setStats] = useState({
     totalApplications: 0,
     activeApplications: 0,
@@ -38,7 +37,6 @@ export const CreativeDashboard: React.FC = () => {
     try {
       setLoading(true);
       
-      console.log('Fetching projects with authenticated backend actor...');
       // Fetch all available projects
       const allProjectsResult = await backendActor.getProjects();
       
@@ -51,7 +49,7 @@ export const CreativeDashboard: React.FC = () => {
 
     } catch (err) {
       setError('Failed to fetch projects');
-      console.error('Error fetching projects:', err);
+      toast.error('Failed to fetch projects' + (err instanceof Error ? `: ${err.message}` : ''));
     } finally {
       setLoading(false);
     }
@@ -80,7 +78,7 @@ export const CreativeDashboard: React.FC = () => {
     }
 
     try {
-      console.log('Applying to project with authenticated backend actor...');
+      toast.info('Applying to project with authenticated backend actor...');
       const result = await backendActor.applyToProject(projectId);
       
       if ('ok' in result) {
@@ -91,8 +89,8 @@ export const CreativeDashboard: React.FC = () => {
         setError(result.err);
       }
     } catch (err) {
+      toast.error('Failed to apply to project' +  (err instanceof Error ? `: ${err.message}` : ''));
       setError('Failed to apply to project');
-      console.error('Error applying to project:', err);
     }
   };
 

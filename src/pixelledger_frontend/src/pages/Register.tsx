@@ -72,7 +72,7 @@ export default function Register() {
                 <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
                   <Building2 className="w-8 h-8 text-white" />
                 </div>
-                <CardTitle className="text-xl text-white">I'm a Client</CardTitle>
+                <CardTitle className="text-xl text-white">I&apos;m a Client</CardTitle>
                 <CardDescription className="text-gray-400">
                   Connect with talented creatives to bring your projects to life
                 </CardDescription>
@@ -99,7 +99,7 @@ export default function Register() {
                 <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
                   <Users className="w-8 h-8 text-white" />
                 </div>
-                <CardTitle className="text-xl text-white">I'm a Creative</CardTitle>
+                <CardTitle className="text-xl text-white">I&apos;m a Creative</CardTitle>
                 <CardDescription className="text-gray-400">
                   Showcase your skills and connect with clients that value your creative work
                 </CardDescription>

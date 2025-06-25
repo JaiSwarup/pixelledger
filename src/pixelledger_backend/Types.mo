@@ -49,6 +49,7 @@ module {
     budget: Nat;
     owner: Principal; // Who created the project
     applicants: [Principal]; // Array of applicant principals
+    selectedCreative: ?Principal; // Selected creative for the project
     isCompleted: Bool; // Whether the project has been completed
   };
 

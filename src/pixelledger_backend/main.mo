@@ -246,6 +246,14 @@ actor PixelLedger {
     }
   };
 
+  // Select a creative for a project - only project owner can select
+  public shared(msg) func selectCreative(projectId: Nat, creative: Principal) : async Result.Result<Text, Text> {
+    switch (projectManager.selectCreative(msg.caller, projectId, creative)) {
+      case (#ok(message)) { #ok(message) };
+      case (#err(error)) { #err(authManager.authErrorToText(error)) };
+    }
+  };
+
   // === ESCROW FUNCTIONALITY ===
 
   // Deposit ICP into escrow for a project (simulation)
@@ -295,6 +303,33 @@ actor PixelLedger {
   // Withdraw remaining escrow balance (for project owner)
   public shared(msg) func withdrawEscrow(projectId: Nat) : async Result.Result<Text, Text> {
     escrowManager.withdrawEscrow(msg.caller, projectId)
+  };
+
+  // Release funds from escrow to a specific creative (project owner only)
+  public shared(msg) func releaseFunds(projectId: Nat, creativePrincipal: Principal) : async Result.Result<Text, Text> {
+    // Get the project to check ownership
+    switch (projectManager.getProjectById(msg.caller, projectId)) {
+      case (#ok(project)) {
+        // Check if caller is the project owner
+        if (authManager.canManageProject(msg.caller, project.owner)) {
+          // Check if the creative is approved for this project
+          switch (projectManager.isApplicantApproved(msg.caller, projectId, creativePrincipal)) {
+            case (#ok(isApproved)) {
+              if (isApproved) {
+                // Release funds from escrow to the creative
+                escrowManager.releaseFunds(msg.caller, projectId, creativePrincipal)
+              } else {
+                #err("Creative is not approved for this project")
+              }
+            };
+            case (#err(error)) { #err(authManager.authErrorToText(error)) };
+          }
+        } else {
+          #err("Unauthorized: Only project owner can release funds")
+        }
+      };
+      case (#err(error)) { #err(authManager.authErrorToText(error)) };
+    }
   };
 
   // === DAO FUNCTIONALITY ===
@@ -358,7 +393,18 @@ actor PixelLedger {
   public shared(msg) func getProfile(user: Principal) : async Result.Result<Profile, Text> {
     switch (profileManager.getProfile(msg.caller, user)) {
       case (#ok(profile)) { #ok(profile) };
-      case (#err(error)) { #err(authManager.authErrorToText(error)) };
+      case (#err(error)) { 
+        // If profile not found in profiles storage, check user's account
+        switch (authManager.getUserAccount(user)) {
+          case (#ok(account)) {
+            switch (account.profile) {
+              case (?profile) { #ok(profile) };
+              case null { #err("Profile not found") };
+            }
+          };
+          case (#err(_)) { #err(authManager.authErrorToText(error)) };
+        }
+      };
     }
   };
 
@@ -366,7 +412,18 @@ actor PixelLedger {
   public shared(msg) func getMyProfile() : async Result.Result<Profile, Text> {
     switch (profileManager.getMyProfile(msg.caller)) {
       case (#ok(profile)) { #ok(profile) };
-      case (#err(error)) { #err(authManager.authErrorToText(error)) };
+      case (#err(error)) { 
+        // If profile not found in profiles storage, check user's account
+        switch (authManager.getUserAccount(msg.caller)) {
+          case (#ok(account)) {
+            switch (account.profile) {
+              case (?profile) { #ok(profile) };
+              case null { #err("Profile not found") };
+            }
+          };
+          case (#err(_)) { #err(authManager.authErrorToText(error)) };
+        }
+      };
     }
   };
 

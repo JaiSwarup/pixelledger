@@ -13,6 +13,7 @@ import { Project } from '../../../declarations/pixelledger_backend/pixelledger_b
 import { useRoleAuth } from '../hooks/useRoleAuth';
 import { useBackendActor } from '../hooks/useBackendActor';
 import { Principal } from '@dfinity/principal';
+import { toast } from 'sonner';
 
 interface ProjectDetailsProps {
   projects: Project[];
@@ -32,6 +33,7 @@ const ProjectDetails = ({ projects, onDataUpdate }: ProjectDetailsProps) => {
   const [error, setError] = useState<string | null>(null);
   const [showApplicationDialog, setShowApplicationDialog] = useState(false);
   const [approvedApplicants, setApprovedApplicants] = useState<Principal[]>([]);
+  const [isCurrentUserApproved, setIsCurrentUserApproved] = useState(false);
 
   // Find the project by ID
   const project = projects.find(p => p.id.toString() === id);
@@ -45,15 +47,27 @@ const ProjectDetails = ({ projects, onDataUpdate }: ProjectDetailsProps) => {
   // Fetch approved applicants when project changes
   useEffect(() => {
     const fetchApprovedApplicants = async () => {
-      const isOwner = userAccount && project && project.owner.toString() === userAccount.principal.toString();
-      
-      if (project && backendActor && isClient() && isOwner) {
+      if (project && backendActor) {
         try {
-          const result = await backendActor.getProjectApprovedApplicants(project.id);
-          if ('ok' in result) {
-            setApprovedApplicants(result.ok);
+          // For project owners, get the full list of approved applicants
+          const isOwner = userAccount && project.owner.toString() === userAccount.principal.toString();
+          
+          if (isClient() && isOwner) {
+            const result = await backendActor.getProjectApprovedApplicants(project.id);
+            if ('ok' in result) {
+              setApprovedApplicants(result.ok);
+            }
+          }
+          
+          // For all users (including creatives), check if current user is approved
+          if (userAccount) {
+            const approvalResult = await backendActor.isApplicantApproved(project.id, userAccount.principal);
+            if ('ok' in approvalResult) {
+              setIsCurrentUserApproved(approvalResult.ok);
+            }
           }
         } catch (error) {
+          // Don't show error toast for approval check, just log it
           console.error('Error fetching approved applicants:', error);
         }
       }
@@ -74,7 +88,7 @@ const ProjectDetails = ({ projects, onDataUpdate }: ProjectDetailsProps) => {
           <h3 className="text-2xl font-orbitron font-bold mb-2 text-gray-300">
             Project not found
           </h3>
-          <p className="text-gray-400 mb-6">The project you're looking for doesn't exist.</p>
+          <p className="text-gray-400 mb-6">The project you&apos;re looking for doesn&apos;t exist.</p>
           <Link to="/projects">
             <Button className="cyber-button text-cyber-black font-medium">
               Back to Projects
@@ -110,8 +124,7 @@ const ProjectDetails = ({ projects, onDataUpdate }: ProjectDetailsProps) => {
         setError('Error applying to project: ' + result.err);
       }
     } catch (error) {
-      console.error('Error applying to project:', error);
-      setError('Failed to apply to project');
+      toast.error('Error applying to project: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsApplying(false);
     }
@@ -126,19 +139,22 @@ const ProjectDetails = ({ projects, onDataUpdate }: ProjectDetailsProps) => {
       const result = await backendActor.approveApplicant(project.id, applicantPrincipal);
       if ('ok' in result) {
         // Success - the creative has been approved
-        console.log('Creative approved successfully:', result.ok);
+        toast.success('Creative approved successfully!');
         // Add to approved applicants list locally for immediate UI update
         setApprovedApplicants(prev => [...prev, applicantPrincipal]);
-        // Clear any previous errors
-        setError(null);
+        
+        // Update current user approved status if they were the one approved
+        if (userAccount && applicantPrincipal.toString() === userAccount.principal.toString()) {
+          setIsCurrentUserApproved(true);
+        }
+        
         onDataUpdate(); // Refresh the project data
       } else {
         // Error occurred
         setError('Failed to approve creative: ' + result.err);
       }
     } catch (error) {
-      console.error('Error approving creative:', error);
-      setError('Failed to approve creative. Please try again.');
+      toast.error('Error approving creative: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -146,6 +162,7 @@ const ProjectDetails = ({ projects, onDataUpdate }: ProjectDetailsProps) => {
 
   const copyPrincipalId = () => {
     navigator.clipboard.writeText(project.id.toString());
+    toast.success('Project ID copied to clipboard!');
   };
 
   const copyUserPrincipal = (principal: Principal) => {
@@ -214,7 +231,12 @@ const ProjectDetails = ({ projects, onDataUpdate }: ProjectDetailsProps) => {
                         {project.title}
                       </CardTitle>
                       <CardDescription className="text-cyber-teal text-lg font-medium">
-                        Client: {project.owner.toString().slice(0, 8)}...{project.owner.toString().slice(-8)}
+                        <Link 
+                          to={`/users/${project.owner.toString()}`}
+                          className="hover:text-cyber-pink transition-colors"
+                        >
+                          Client: {project.owner.toString().slice(0, 8)}...{project.owner.toString().slice(-8)}
+                        </Link>
                       </CardDescription>
                     </div>
                     <div className="text-right">
@@ -258,15 +280,27 @@ const ProjectDetails = ({ projects, onDataUpdate }: ProjectDetailsProps) => {
                                       <CheckCircle className="w-5 h-5 text-white" />
                                     </div>
                                     <div>
-                                      <p className="font-medium text-white">
+                                      <Link 
+                                        to={`/users/${applicant.toString()}`}
+                                        className="font-medium text-white hover:text-green-300 transition-colors"
+                                      >
                                         Approved Creative #{index + 1}
-                                      </p>
+                                      </Link>
                                       <p className="text-sm text-gray-400 font-mono">
                                         {applicant.toString().slice(0, 12)}...{applicant.toString().slice(-8)}
                                       </p>
                                     </div>
                                   </div>
                                   <div className="flex space-x-2">
+                                    <Link to={`/users/${applicant.toString()}`}>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="border-green-400/50 text-green-400 hover:border-green-400 hover:text-green-300"
+                                      >
+                                        View Profile
+                                      </Button>
+                                    </Link>
                                     <Button
                                       size="sm"
                                       variant="outline"
@@ -309,15 +343,27 @@ const ProjectDetails = ({ projects, onDataUpdate }: ProjectDetailsProps) => {
                                       </span>
                                     </div>
                                     <div>
-                                      <p className="font-medium text-white">
+                                      <Link 
+                                        to={`/users/${applicant.toString()}`}
+                                        className="font-medium text-white hover:text-cyber-teal transition-colors"
+                                      >
                                         Applicant #{index + 1}
-                                      </p>
+                                      </Link>
                                       <p className="text-sm text-gray-400 font-mono">
                                         {applicant.toString().slice(0, 12)}...{applicant.toString().slice(-8)}
                                       </p>
                                     </div>
                                   </div>
                                   <div className="flex space-x-2">
+                                    <Link to={`/users/${applicant.toString()}`}>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="border-gray-600 text-gray-300 hover:border-cyber-teal hover:text-cyber-teal"
+                                      >
+                                        View Profile
+                                      </Button>
+                                    </Link>
                                     <Button
                                       size="sm"
                                       variant="outline"
@@ -373,12 +419,22 @@ const ProjectDetails = ({ projects, onDataUpdate }: ProjectDetailsProps) => {
                   <CardTitle className="font-orbitron">Project Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center text-gray-300">
-                    <Calendar className="w-5 h-5 mr-3 text-cyber-teal" />
-                    <div>
-                      <div className="font-medium">Project ID</div>
-                      <div className="text-sm text-gray-400">{project.id.toString()}</div>
+                  <div className="flex items-center justify-between text-gray-300">
+                    <div className="flex items-center">
+                      <Calendar className="w-5 h-5 mr-3 text-cyber-teal" />
+                      <div>
+                        <div className="font-medium">Project ID</div>
+                        <div className="text-sm text-gray-400">{project.id.toString()}</div>
+                      </div>
                     </div>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={copyPrincipalId}
+                      className="h-6 w-6 p-0"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </Button>
                   </div>
                   
                   <div className="flex items-center text-gray-300">
@@ -479,12 +535,23 @@ const ProjectDetails = ({ projects, onDataUpdate }: ProjectDetailsProps) => {
                 </Dialog>
               )}
 
-              {/* Influencer: Already Applied */}
-              {isCreative() && isAlreadyApplied && (
+              {/* Creative: Already Applied but not approved */}
+              {isCreative() && isAlreadyApplied && !isCurrentUserApproved && (
+                <div className="w-full px-6 py-6 text-center text-yellow-400 bg-yellow-900/20 rounded-lg border border-yellow-400/30">
+                  <div className="w-8 h-8 mx-auto mb-2 rounded-full border-2 border-yellow-400 flex items-center justify-center">
+                    <span className="text-yellow-400">⏳</span>
+                  </div>
+                  <div className="font-medium">Application Submitted</div>
+                  <div className="text-sm text-gray-400">Waiting for client approval</div>
+                </div>
+              )}
+
+              {/* Creative: Approved */}
+              {isCreative() && isCurrentUserApproved && (
                 <div className="w-full px-6 py-6 text-center text-green-400 bg-green-900/20 rounded-lg border border-green-400/30">
                   <CheckCircle className="w-8 h-8 mx-auto mb-2" />
-                  <div className="font-medium">Application Submitted</div>
-                  <div className="text-sm text-gray-400">You've applied to this project</div>
+                  <div className="font-medium">Application Approved! ✨</div>
+                  <div className="text-sm text-gray-400">You&apos;ve been selected for this project</div>
                 </div>
               )}
 

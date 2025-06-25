@@ -104,7 +104,7 @@ const ForCreatives = () => {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
             >
-              Turn your passion into profit. Partner with leading clients, build your creative reputation, and get paid what you're worth.
+              Turn your passion into profit. Partner with leading clients, build your creative reputation, and get paid what you&apos;re worth.
             </motion.p>
 
             <motion.div 

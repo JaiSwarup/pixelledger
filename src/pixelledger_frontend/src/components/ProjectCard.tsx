@@ -6,27 +6,58 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Project } from '../../../declarations/pixelledger_backend/pixelledger_backend.did';
 import { useRoleAuth } from '../hooks/useRoleAuth';
 import { useBackendActor } from '../hooks/useBackendActor';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
+import { Principal } from '@dfinity/principal';
 
 interface ProjectCardProps {
   project: Project;
-  onApply?: (projectId: bigint) => void;
   onDataUpdate?: () => void;
   showActions?: boolean;
 }
 
 const ProjectCard = ({ 
   project, 
-  onApply, 
   onDataUpdate, 
   showActions = true 
 }: ProjectCardProps) => {
   const { userAccount, isClient, isCreative } = useRoleAuth();
   const { backendActor } = useBackendActor();
   const [loading, setLoading] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
+  const [checkingApproval, setCheckingApproval] = useState(false);
 
   const status = project.isCompleted ? 'Completed' : 'Open';
+  
+  // Check if current user is approved for this project
+  useEffect(() => {
+    const checkApprovalStatus = async () => {
+      if (!isCreative() || !backendActor || !userAccount) return;
+      
+      // Only check if user has applied
+      const hasApplied = project.applicants.some(
+        applicant => applicant.toString() === userAccount.principal.toString()
+      );
+      
+      if (!hasApplied) return;
+      
+      setCheckingApproval(true);
+      try {
+        const result = await backendActor.isApplicantApproved(project.id, userAccount.principal);
+        if ('ok' in result) {
+          setIsApproved(result.ok);
+        }
+      } catch (error) {
+        // Don't show error for this check, just assume not approved
+        setIsApproved(false);
+      } finally {
+        setCheckingApproval(false);
+      }
+    };
+
+    checkApprovalStatus();
+  }, [project.id, project.applicants, isCreative, backendActor, userAccount]);
   
   const statusColors = {
     'Open': 'bg-cyber-teal text-cyber-black',
@@ -43,10 +74,10 @@ const ProjectCard = ({
       if ('ok' in result) {
         onDataUpdate?.();
       } else {
-        console.error('Error applying to project:', result.err);
+        toast.error(`Error applying to project: ${result.err}`);
       }
     } catch (error) {
-      console.error('Error applying to project:', error);
+      toast.error(`Failed to apply: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -75,9 +106,12 @@ const ProjectCard = ({
           <h3 className="text-xl font-orbitron font-bold text-white group-hover:cyber-text-gradient transition-all duration-300">
             {project.title}
           </h3>
-          <p className="text-cyber-teal font-medium">
+          <Link 
+            to={`/users/${project.owner.toString()}`}
+            className="text-cyber-teal font-medium hover:text-cyber-pink transition-colors duration-200"
+          >
             Client: {project.owner.toString().slice(0, 8)}...{project.owner.toString().slice(-8)}
-          </p>
+          </Link>
         </CardHeader>
         
         <CardContent className="pb-4">
@@ -112,9 +146,16 @@ const ProjectCard = ({
                 )}
 
                 {/* Creative: Already Applied */}
-                {isCreative() && isAlreadyApplied && (
+                {isCreative() && isAlreadyApplied && !isApproved && (
+                  <span className="px-3 py-2 text-sm text-yellow-400 bg-yellow-900/20 rounded-md border border-yellow-400/30">
+                    {checkingApproval ? 'Checking...' : 'Applied'}
+                  </span>
+                )}
+
+                {/* Creative: Approved */}
+                {isCreative() && isApproved && (
                   <span className="px-3 py-2 text-sm text-green-400 bg-green-900/20 rounded-md border border-green-400/30">
-                    Applied
+                    ✓ Approved
                   </span>
                 )}
 

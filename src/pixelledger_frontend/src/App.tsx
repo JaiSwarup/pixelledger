@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Project, Profile, Proposal } from '../../declarations/pixelledger_backend/pixelledger_backend.did';
 import { Principal } from '@dfinity/principal';
@@ -11,10 +11,12 @@ import { useRoleAuth } from './hooks/useRoleAuth';
 // Components
 import { AuthRouter } from './components/AuthRouter';
 import { LoadingScreen } from './components/LoadingScreen';
+import { toast } from 'sonner';
+import { Toaster } from './components/ui/sonner';
 
 // Main authenticated app component
 function AuthenticatedApp() {
-  const { identity, principal, isAuthenticated, isInitialized } = useAuth();
+  const { principal, isAuthenticated } = useAuth();
   const { backendActor } = useBackendActor();
   
   const [projects, setProjects] = useState<Project[]>([]);
@@ -23,11 +25,11 @@ function AuthenticatedApp() {
   const [userBalance, setUserBalance] = useState<bigint>(BigInt(0));
   const [isLoading, setIsLoading] = useState(true);
   
-  const { isRegistered, loading: roleLoading, userAccount } = useRoleAuth();
+  const { isRegistered, loading: roleLoading } = useRoleAuth();
 
   // Clear state when principal changes (user switches accounts)
   useEffect(() => {
-    console.log('App: Principal changed to:', principal?.toString() || 'null');
+    // console.log('App: Principal changed to:', principal?.toString() || 'null');
     // Reset all app state when principal changes
     setProjects([]);
     setProposals([]);
@@ -38,25 +40,28 @@ function AuthenticatedApp() {
 
   // Load user data when we have a registered user
   useEffect(() => {
-    if (principal && isAuthenticated && isRegistered && backendActor) {
-      const initializeApp = async () => {
-        setIsLoading(true);
-        try {
-          await Promise.all([
-            loadUserData(principal),
-            loadDashboardData()
-          ]);
-        } catch (error) {
-          console.error('Error initializing app:', error);
-        } finally {
-          setIsLoading(false);
-        }
-      };
+    if (principal && isAuthenticated && backendActor && !roleLoading) {
+      if (isRegistered) {
+        // User is registered, load their data
+        const initializeApp = async () => {
+          setIsLoading(true);
+          try {
+            await Promise.all([
+              loadUserData(principal),
+              loadDashboardData()
+            ]);
+          } catch (error) {
+            toast.error('Failed to load app data: ' + (error instanceof Error ? error.message : 'Unknown error'));
+          } finally {
+            setIsLoading(false);
+          }
+        };
 
-      initializeApp();
-    } else if (isAuthenticated && !roleLoading && !isRegistered) {
-      // User is authenticated but not registered
-      setIsLoading(false);
+        initializeApp();
+      } else {
+        // User is authenticated but not registered - stop loading
+        setIsLoading(false);
+      }
     }
   }, [principal, isAuthenticated, isRegistered, backendActor, roleLoading]);
 
@@ -64,21 +69,26 @@ function AuthenticatedApp() {
     if (!backendActor) return;
     
     try {
-      // Use role-based profile loading
+      // Try to get profile and balance using getMyProfile for the user's own profile
       const [profileResult, balance] = await Promise.all([
-        backendActor.getProfile(userPrincipal),
+        backendActor.getMyProfile(),
         backendActor.getUserBalance(userPrincipal)
       ]);
       
       if ('ok' in profileResult) {
         setUserProfile(profileResult.ok);
       } else {
+        // Profile not found - user is registered but hasn't created a profile yet
+        console.log('Profile not found for registered user:', profileResult.err);
         setUserProfile(null);
       }
       
       setUserBalance(balance);
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error('Failed to load user data:', error);
+      // Don't show error toast for profile not found, it's expected for new users
+      setUserProfile(null);
+      setUserBalance(BigInt(0));
     }
   };
 
@@ -94,7 +104,7 @@ function AuthenticatedApp() {
       setProjects(projectsResult); // projectsResult is now directly an array
       setProposals(proposalsData);
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      toast.error('Failed to load dashboard data: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -108,12 +118,16 @@ function AuthenticatedApp() {
     loadDashboardData();
   };
 
-  // Show loading screen while initializing
-  if (isLoading && isAuthenticated && isRegistered) {
+  // Show loading screen only when we're still determining authentication/registration status
+  // or when a registered user's data is being loaded
+  if (roleLoading || (isAuthenticated && isRegistered && isLoading)) {
+    const message = roleLoading ? "Connecting to backend..." : "Initializing...";
+    const submessage = roleLoading ? "Establishing secure connection" : "Setting up your account";
+    
     return (
       <LoadingScreen 
-        message="Loading PixelLedger..."
-        submessage="Fetching your data and projects"
+        message={message}
+        submessage={submessage}
       />
     );
   }
@@ -136,6 +150,7 @@ function AuthenticatedApp() {
 function App() {
   return (
     <AuthProvider>
+      <Toaster />
       <BackendActorProvider>
         <Router>
           <AuthenticatedApp />

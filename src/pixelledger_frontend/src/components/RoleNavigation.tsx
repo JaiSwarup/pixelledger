@@ -1,6 +1,6 @@
 import { NavLink, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LogOut, User, Wallet, ChevronDown } from 'lucide-react';
+import { LogOut, User, ChevronDown } from 'lucide-react';
 import { Profile } from '../../../declarations/pixelledger_backend/pixelledger_backend.did';
 import { useAuth } from '../hooks/useAuth';
 import { useRoleAuth } from '../hooks/useRoleAuth';
@@ -32,18 +32,6 @@ export function RoleNavigation({ userProfile, userBalance }: RoleNavigationProps
     if (isClient()) return 'Client';
     if (isCreative()) return 'Creative';
     return 'User';
-  };
-
-  const getRoleColor = () => {
-    if (isClient()) return 'from-blue-500 to-cyan-500';
-    if (isCreative()) return 'from-purple-500 to-pink-500';
-    return 'from-gray-500 to-gray-600';
-  };
-
-  const getRoleIcon = () => {
-    if (isClient()) return '🏢';
-    if (isCreative()) return '⭐';
-    return '👤';
   };
 
   return (
