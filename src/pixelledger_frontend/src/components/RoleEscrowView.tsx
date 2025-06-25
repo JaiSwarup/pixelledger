@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Wallet, TrendingUp, Clock, CheckCircle, AlertCircle, DollarSign, Send, ArrowDown, ArrowUp } from 'lucide-react';
 import ThreeBackground from './ThreeBackground';
+import { EscrowDemo } from './EscrowDemo';
 import { pixelledger_backend } from 'declarations/pixelledger_backend';
 import { toast } from 'sonner';
 
@@ -42,11 +43,12 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
   });
 
   // Mock transaction history for demonstration
-  const [transactions] = useState([
+  const [transactions, setTransactions] = useState([
     { id: '1', type: 'Deposit', amount: '5,000', date: '2024-06-01', status: 'Confirmed', txHash: '0x1234...5678' },
     { id: '2', type: 'Payout', amount: '1,250', date: '2024-06-15', status: 'Processing', txHash: '0x5678...9012' },
     { id: '3', type: 'Deposit', amount: '12,500', date: '2024-06-20', status: 'Confirmed', txHash: '0x9012...3456' },
   ]);
+  const [testAmount, setTestAmount] = useState('10000');
 
   // Filter projects based on user role
   useEffect(() => {
@@ -88,10 +90,14 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
 
   const updateCreativeStats = (projectsList: Project[]) => {
     const selectedProjects = projectsList.filter(c => 
-      c.applicants.some(applicant => applicant.toString() === userPrincipal?.toString())
+      c.selectedCreative?.toString() === userPrincipal?.toString()
     ).length;
-    const completedProjects = projectsList.filter(c => c.isCompleted).length;
-    const totalEarnings = projectsList.filter(c => c.isCompleted).reduce((sum, c) => sum + Number(c.budget), 0);
+    const completedProjects = projectsList.filter(c => 
+      c.isCompleted && c.selectedCreative?.toString() === userPrincipal?.toString()
+    ).length;
+    const totalEarnings = projectsList.filter(c => 
+      c.isCompleted && c.selectedCreative?.toString() === userPrincipal?.toString()
+    ).reduce((sum, c) => sum + Number(c.budget), 0);
 
     setStats({
       totalEscrowed: 0,
@@ -131,7 +137,7 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
     if (!userPrincipal || !selectedProject) return;
 
     if (!isClient()) {
-      toast.error('Only clientss can deposit funds to escrow');
+      toast.error('Only clients can deposit funds to escrow');
       return;
     }
 
@@ -154,6 +160,7 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
       );
       if ('ok' in result) {
         toast.success('Successfully deposited to escrow!');
+        addTransaction('Deposit', amount.toString());
         setDepositAmount('');
         setSelectedProject('');
         onBalanceUpdate(userPrincipal);
@@ -173,9 +180,14 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
 
     setIsLoading(true);
     try {
+      // Get the current escrow balance before releasing
+      const balanceResult = await backendActor.getEscrowBalance(projectId);
+      const escrowAmount = 'ok' in balanceResult ? balanceResult.ok.toString() : '0';
+      
       const result = await backendActor.releaseFunds(projectId, creativePrincipal);
       if ('ok' in result) {
         toast.success('Funds released successfully!');
+        addTransaction('Payout', escrowAmount);
         loadEscrowBalances(userProjects);
       } else {
         toast.error('Error releasing funds: ' + result.err);
@@ -196,9 +208,14 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
 
     setIsLoading(true);
     try {
+      // Get the current escrow balance before withdrawing
+      const balanceResult = await backendActor.getEscrowBalance(projectId);
+      const escrowAmount = 'ok' in balanceResult ? balanceResult.ok.toString() : '0';
+      
       const result = await backendActor.withdrawEscrow(projectId);
       if ('ok' in result) {
         toast.success('Funds withdrawn from escrow successfully!');
+        addTransaction('Withdrawal', escrowAmount);
         onBalanceUpdate(userPrincipal);
         loadEscrowBalances(userProjects);
       } else {
@@ -213,6 +230,44 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleAddTestBalance = async () => {
+    if (!userPrincipal) return;
+
+    const amount = parseFloat(testAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Please enter a valid positive amount');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await backendActor.addUserBalance(userPrincipal, BigInt(Math.floor(amount)));
+      if ('ok' in result) {
+        toast.success(`Successfully added ${amount} tokens to your balance!`);
+        onBalanceUpdate(userPrincipal);
+        setTestAmount('10000'); // Reset to default
+      } else {
+        toast.error('Error adding balance: ' + result.err);
+      }
+    } catch (error) {
+      toast.error('Error adding test balance: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const addTransaction = (type: 'Deposit' | 'Payout' | 'Withdrawal', amount: string, status: 'Confirmed' | 'Processing' = 'Confirmed') => {
+    const newTransaction = {
+      id: Date.now().toString(),
+      type,
+      amount,
+      date: new Date().toISOString().split('T')[0],
+      status,
+      txHash: `0x${Math.random().toString(16).substr(2, 8)}...${Math.random().toString(16).substr(2, 4)}`
+    };
+    setTransactions(prev => [newTransaction, ...prev]);
   };
 
   const getStatusIcon = (status: string) => {
@@ -261,6 +316,51 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
             </p>
           </motion.div>
 
+          {/* Demo Setup */}
+          <EscrowDemo />
+
+          {/* How It Works Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-8"
+          >
+            <Card className="neuro-card border-blue-500/30">
+              <CardHeader>
+                <CardTitle className="text-xl font-orbitron flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-blue-400" />
+                  How Escrow Works
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                      <span className="font-medium text-blue-400">Deposit Funds</span>
+                    </div>
+                    <p className="text-gray-300">Add tokens to your balance, then deposit them into project escrow for security.</p>
+                  </div>
+                  <div className="bg-cyber-teal/10 border border-cyber-teal/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-6 h-6 bg-cyber-teal text-black rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                      <span className="font-medium text-cyber-teal">Work Completion</span>
+                    </div>
+                    <p className="text-gray-300">Creatives complete project work. Funds remain secured in escrow.</p>
+                  </div>
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</span>
+                      <span className="font-medium text-green-400">Release Payment</span>
+                    </div>
+                    <p className="text-gray-300">Review work and release funds to creatives, or withdraw if needed.</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
           {/* Stats Overview */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -296,14 +396,58 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
 
             <Card className="neuro-card">
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-purple-400">
+                <CardTitle className="flex items-center gap-2 text-green-400">
                   <CheckCircle className="w-5 h-5" />
                   Completed
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-purple-400">{stats.completedPayouts.toLocaleString()}</div>
+                <div className="text-3xl font-bold text-green-400">{stats.completedPayouts.toLocaleString()}</div>
                 <p className="text-gray-400 text-sm">Successfully paid out</p>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Test Balance Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mb-8"
+          >
+            <Card className="neuro-card border-yellow-500/30">
+              <CardHeader>
+                <CardTitle className="text-xl font-orbitron flex items-center gap-2">
+                  <ArrowUp className="w-5 h-5 text-yellow-400" />
+                  Test Balance (For Development)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div className="md:col-span-2">
+                    <Label className="text-gray-300 mb-2 block">Add Test Tokens</Label>
+                    <Input
+                      type="number"
+                      value={testAmount}
+                      onChange={(e) => setTestAmount(e.target.value)}
+                      className="neuro-input"
+                      placeholder="Enter amount"
+                      min="1"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      onClick={handleAddTestBalance}
+                      disabled={isLoading || !testAmount}
+                      className="w-full bg-yellow-600 hover:bg-yellow-700 text-black font-bold"
+                    >
+                      {isLoading ? 'Adding...' : 'Add Test Balance'}
+                    </Button>
+                  </div>
+                </div>
+                <div className="text-sm text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                  ⚠️ This is for testing purposes only. Add tokens to your balance to test escrow deposits.
+                </div>
               </CardContent>
             </Card>
           </motion.div>
@@ -362,6 +506,11 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
                 </div>
                 <div className="text-sm text-gray-400">
                   Your Balance: <span className="text-cyber-teal font-bold">{userBalance.toString()} tokens</span>
+                  {userBalance === BigInt(0) && (
+                    <span className="block text-yellow-400 text-xs mt-1">
+                      ⚠️ Add test balance above to deposit funds
+                    </span>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -489,14 +638,14 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
                                     Withdraw
                                   </Button>
                                 </div>
-                                {project.selectedCreative && project.selectedCreative.length > 0 && !project.isCompleted && getEscrowBalance(project.id) > BigInt(0) && (
+                                {project.selectedCreative && !project.isCompleted && getEscrowBalance(project.id) > BigInt(0) && (
                                   <div className="pt-3 border-t border-gray-600">
                                     <p className="text-sm text-gray-400 mb-3">
-                                      Selected creative: {project.selectedCreative[0]?.toString()}
+                                      Selected creative: {project.selectedCreative.toString().slice(0, 20)}...
                                     </p>
                                     <Button 
                                       className="w-full bg-green-600 hover:bg-green-700 text-white"
-                                      onClick={() => project.selectedCreative?.[0] && handleReleaseFunds(project.id, project.selectedCreative[0])}
+                                      onClick={() => project.selectedCreative?.[0] && handleReleaseFunds(project.id, project.selectedCreative?.[0])}
                                       disabled={isLoading}
                                     >
                                       <Send className="w-4 h-4 mr-2" />
@@ -588,6 +737,48 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
             </p>
           </motion.div>
 
+          {/* How Earnings Work Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-8"
+          >
+            <Card className="neuro-card border-purple-500/30">
+              <CardHeader>
+                <CardTitle className="text-xl font-orbitron flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-purple-400" />
+                  How Earnings Work
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-6 h-6 bg-yellow-500 text-black rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                      <span className="font-medium text-yellow-400">Apply & Get Selected</span>
+                    </div>
+                    <p className="text-gray-300">Apply to projects and wait for client selection. Your applications are tracked here.</p>
+                  </div>
+                  <div className="bg-cyber-teal/10 border border-cyber-teal/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-6 h-6 bg-cyber-teal text-black rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                      <span className="font-medium text-cyber-teal">Complete Work</span>
+                    </div>
+                    <p className="text-gray-300">Deliver quality work according to project requirements. Funds are held in escrow.</p>
+                  </div>
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</span>
+                      <span className="font-medium text-green-400">Get Paid</span>
+                    </div>
+                    <p className="text-gray-300">Client releases payment to your account. Track your earnings history here.</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
           {/* Stats Overview */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -657,8 +848,9 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
             ) : (
               <div className="space-y-6">
                 {appliedProjects.map((project, index) => {
-                  const isSelected = project.applicants?.some(
-                    selected => selected.toString() === userPrincipal?.toString()
+                  const isSelected = project.selectedCreative?.toString() === userPrincipal?.toString();
+                  const hasApplied = project.applicants?.some(
+                    applicant => applicant.toString() === userPrincipal?.toString()
                   );
                   
                   return (
@@ -680,9 +872,12 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
                             </div>
                             <Badge className={`bg-transparent border-current ${
                               project.isCompleted ? 'text-green-400' :
-                              isSelected ? 'text-cyber-teal' : 'text-yellow-400'
+                              isSelected ? 'text-cyber-teal' : 
+                              hasApplied ? 'text-yellow-400' : 'text-gray-400'
                             }`}>
-                              {project.isCompleted ? 'Completed' : isSelected ? 'Selected' : 'Applied'}
+                              {project.isCompleted ? 'Completed' : 
+                               isSelected ? 'Selected' : 
+                               hasApplied ? 'Applied' : 'Not Applied'}
                             </Badge>
                           </div>
                         </CardHeader>
@@ -696,7 +891,9 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
                             <div>
                               <p className="text-gray-400 text-sm">Status</p>
                               <p className="text-xl font-bold text-white">
-                                {project.isCompleted ? 'Payment Released' : isSelected ? 'Work in Progress' : 'Under Review'}
+                                {project.isCompleted ? 'Payment Released' : 
+                                 isSelected ? 'Work in Progress' : 
+                                 hasApplied ? 'Under Review' : 'Not Applied'}
                               </p>
                             </div>
                           </div>
@@ -725,7 +922,7 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
                             </div>
                           )}
 
-                          {!isSelected && !project.isCompleted && (
+                          {!isSelected && !project.isCompleted && hasApplied && (
                             <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
                               <div className="flex items-center gap-2">
                                 <Clock className="w-5 h-5 text-yellow-400" />
@@ -733,6 +930,18 @@ export function RoleEscrowView({ projects, userPrincipal, userBalance, onBalance
                               </div>
                               <p className="text-gray-300 mt-2 text-sm">
                                 The client is currently reviewing applications for this project.
+                              </p>
+                            </div>
+                          )}
+                          
+                          {!hasApplied && !project.isCompleted && (
+                            <div className="bg-gray-500/10 border border-gray-500/30 rounded-lg p-4">
+                              <div className="flex items-center gap-2">
+                                <AlertCircle className="w-5 h-5 text-gray-400" />
+                                <p className="text-gray-400 font-medium">Not Applied</p>
+                              </div>
+                              <p className="text-gray-300 mt-2 text-sm">
+                                You haven&apos;t applied to this project yet.
                               </p>
                             </div>
                           )}
